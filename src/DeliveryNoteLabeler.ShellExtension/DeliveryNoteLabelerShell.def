@@ -1,5 +1,0 @@
-LIBRARY "DeliveryNoteLabelerShell"
-
-EXPORTS
-    DllGetClassObject   PRIVATE
-    DllCanUnloadNow     PRIVATE

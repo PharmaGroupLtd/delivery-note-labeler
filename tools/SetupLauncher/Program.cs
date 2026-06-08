@@ -123,6 +123,21 @@ static void InstallFromPackage(string packageRoot, string logPath)
         "Uninstall.ps1",
         "README.txt",
         "DeliveryNoteLabeler-package.zip",
+        "DeliveryNoteLabeler.Sparse.msix",
+        "DeliveryNoteLabelerShell.dll",
+        "DeliveryNoteLabelerShell.lib",
+        "DeliveryNoteLabelerShell.exp",
+        "sample-label.zpl",
+        "Register-SparsePackage.ps1",
+        "Trust-PackageCertificate.ps1",
+        "Setup.ps1",
+        "DeliveryNoteLabelerPackage.cer",
+        "PrintLabels.ps1",
+        "PrintLabels.cmd",
+        "PrintLabels.exe",
+        "PrintLabels.dll",
+        "PrintLabels.deps.json",
+        "PrintLabels.runtimeconfig.json",
     };
 
     foreach (var entry in Directory.EnumerateFileSystemEntries(packageRoot))
@@ -145,26 +160,63 @@ static void InstallFromPackage(string packageRoot, string logPath)
     }
 
     var installedExe = Path.Combine(installDir, "DeliveryNoteLabeler.exe");
-    var launchCmdPath = Path.Combine(installDir, "PrintLabels.cmd");
-    var launchPs1Path = Path.Combine(installDir, "PrintLabels.ps1");
 
     if (!File.Exists(installedExe))
     {
         throw new FileNotFoundException("Installation failed: app executable was not copied.", installedExe);
     }
 
-    if (!File.Exists(launchCmdPath) || !File.Exists(launchPs1Path))
-    {
-        throw new FileNotFoundException("Installation failed: Print Labels launcher files were not copied.");
-    }
-
-    RegisterPrintLabelsContextMenu(launchCmdPath, Path.Combine(installDir, "DeliveryNoteLabeler.ico"), installedExe, logPath);
+    RemoveInstallBloat(installDir, logPath);
+    RegisterPrintLabelsContextMenu(installedExe, Path.Combine(installDir, "DeliveryNoteLabeler.ico"), logPath);
 }
 
-static void RegisterPrintLabelsContextMenu(string launchCmdPath, string iconPath, string exePath, string logPath)
+static string GetPrintLabelsShellCommand(string appExePath)
 {
-    var iconValue = File.Exists(iconPath) ? iconPath : $"{exePath},0";
-    var command = $"\"{launchCmdPath}\" %*";
+    var placeholders = string.Join(' ', Enumerable.Range(1, 9).Select(index => $"\"%{index}\""));
+    return $"\"{appExePath}\" {placeholders}";
+}
+
+static void RemoveInstallBloat(string installDir, string logPath)
+{
+    var removeNames = new[]
+    {
+        "DeliveryNoteLabeler.Sparse.msix",
+        "DeliveryNoteLabelerShell.dll",
+        "DeliveryNoteLabelerShell.lib",
+        "DeliveryNoteLabelerShell.exp",
+        "sample-label.zpl",
+        "Register-SparsePackage.ps1",
+        "Trust-PackageCertificate.ps1",
+        "PrintLabels.ps1",
+        "PrintLabels.cmd",
+        "PrintLabels.exe",
+        "PrintLabels.dll",
+        "PrintLabels.deps.json",
+        "PrintLabels.runtimeconfig.json",
+    };
+
+    foreach (var fileName in removeNames)
+    {
+        var path = Path.Combine(installDir, fileName);
+        if (!File.Exists(path))
+        {
+            continue;
+        }
+
+        File.Delete(path);
+        Log(logPath, $"Removed unused file: {fileName}");
+    }
+
+    foreach (var pdb in Directory.EnumerateFiles(installDir, "*.pdb", SearchOption.AllDirectories))
+    {
+        File.Delete(pdb);
+    }
+}
+
+static void RegisterPrintLabelsContextMenu(string appExePath, string iconPath, string logPath)
+{
+    var iconValue = File.Exists(iconPath) ? iconPath : $"{appExePath},0";
+    var command = GetPrintLabelsShellCommand(appExePath);
 
     var registryPaths = new[]
     {

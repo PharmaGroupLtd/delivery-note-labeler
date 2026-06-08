@@ -13,11 +13,6 @@ Built with **.NET 8 WPF** (native Windows UI). Phase 1 covers scanning, review q
 - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) — only if you build with `.\scripts\build.ps1` without `-SelfContained`
 - Release packages from `.\scripts\package.ps1` include the runtime and do **not** require .NET on target PCs
 
-To build the **Windows 11 primary** context menu (not just “Show more options”):
-
-- Visual Studio Build Tools with the **Desktop development with C++** workload (builds `DeliveryNoteLabelerShell.dll`)
-- **Windows 10/11 SDK** (provides `makeappx.exe` and `signtool.exe` for the sparse identity package)
-
 ## Run from source
 
 ```powershell
@@ -45,14 +40,7 @@ Build a published app and add **Print Labels** to the File Explorer right-click 
 
 This runs `dotnet publish` and outputs:
 
-`dist\publish\DeliveryNoteLabeler.exe`
-
-When the C++ build tools and Windows SDK are installed, the build also produces:
-
-- `dist\publish\DeliveryNoteLabelerShell.dll` — Windows 11 context menu handler
-- `dist\publish\DeliveryNoteLabeler.Sparse.msix` — sparse identity package for the Win11 menu
-
-Framework-dependent publish keeps the install smaller when the .NET 8 Desktop Runtime is deployed once to all PCs (recommended for business deployment via Intune or MSI).
+- `dist\publish\DeliveryNoteLabeler.exe` — main app (also used by the Explorer **Print Labels** menu)
 
 Framework-dependent publish (`.\scripts\build.ps1` without `-SelfContained`) keeps the install smaller when the .NET 8 Desktop Runtime is deployed once to all PCs (recommended for business deployment via Intune or MSI).
 
@@ -68,17 +56,13 @@ This copies the published app to:
 
 `%LOCALAPPDATA%\Programs\Delivery Note Labeler\`
 
-and registers Explorer menu entries:
+and registers the Explorer **Print Labels** menu for PDF files (on Windows 11 it may appear under **Show more options**).
 
-**Windows 11:** **Print Labels** on the main right-click menu (when the sparse package was built)
-
-**First-time Windows 11 setup:** the sparse package is signed with a local development certificate. Run this **once as Administrator**, then re-run `install.ps1`:
+If the menu stops working after an update, run:
 
 ```powershell
-.\scripts\trust-package-certificate.ps1
+.\scripts\refresh-print-labels.ps1
 ```
-
-**All versions / fallback:** **Print Labels** under **Show more options** (legacy registry handler)
 
 ### Install on other computers
 
@@ -92,7 +76,7 @@ Copy **`dist\DeliveryNoteLabeler-*-Setup.exe`** to the target PC and double-clic
 
 Target PCs need **Windows 10/11 64-bit only**. They do **not** need Visual Studio, the Windows SDK, or a separate .NET install.
 
-The release package no longer tries to register the Windows 11 AppX/sparse menu (that path required extra certificates and caused installs to fail on normal PCs). **Print Labels** is registered via the standard Explorer menu instead (on Windows 11 it may appear under **Show more options**).
+**Print Labels** is registered via the standard Explorer menu (on Windows 11 it may appear under **Show more options**).
 
 ### Online download and automatic update checks
 
@@ -270,16 +254,12 @@ delivery-note-labeler/
   tests/
     DeliveryNoteLabeler.Core.Tests/
   scripts/
-    build.ps1                     # dotnet publish + Win11 shell extension
+    build.ps1                     # dotnet publish
     package.ps1                   # self-contained release folder + zip for other PCs
-    build-sparse-package.ps1      # sparse MSIX for Win11 menu
-    register-sparse-package.ps1   # register/remove sparse package
-    trust-package-certificate.ps1 # one-time admin cert trust for sparse package
     install.ps1                   # Install exe + Explorer menu (this PC, from dist\publish)
+    refresh-print-labels.ps1      # Re-register Explorer menu without full reinstall
     uninstall.ps1                 # Remove install + menu
   packaging/install/              # Standalone Install.ps1 copied into release packages
-  packaging/sparse/               # AppxManifest for Win11 context menu
-  src/DeliveryNoteLabeler.ShellExtension/  # IExplorerCommand COM DLL
   dist/
     publish/                      # Published exe output
 ```

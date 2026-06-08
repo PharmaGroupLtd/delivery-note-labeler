@@ -6,12 +6,27 @@ $ErrorActionPreference = "Stop"
 $PackageRoot = $PSScriptRoot
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\Delivery Note Labeler"
 $ExePath = Join-Path $InstallDir "DeliveryNoteLabeler.exe"
-$LaunchCmdPath = Join-Path $InstallDir "PrintLabels.cmd"
 $SkipWhenCopying = @(
     "Install.ps1",
     "Install.cmd",
     "Uninstall.ps1",
-    "README.txt"
+    "README.txt",
+    "DeliveryNoteLabeler-package.zip",
+    "DeliveryNoteLabeler.Sparse.msix",
+    "DeliveryNoteLabelerShell.dll",
+    "DeliveryNoteLabelerShell.lib",
+    "DeliveryNoteLabelerShell.exp",
+    "sample-label.zpl",
+    "Register-SparsePackage.ps1",
+    "Trust-PackageCertificate.ps1",
+    "Setup.ps1",
+    "DeliveryNoteLabelerPackage.cer",
+    "PrintLabels.ps1",
+    "PrintLabels.cmd",
+    "PrintLabels.exe",
+    "PrintLabels.dll",
+    "PrintLabels.deps.json",
+    "PrintLabels.runtimeconfig.json"
 )
 
 if (-not (Test-Path (Join-Path $PackageRoot "DeliveryNoteLabeler.exe"))) {
@@ -35,19 +50,17 @@ Get-ChildItem -Path $PackageRoot -Force |
         Copy-Item -Path $_.FullName -Destination $InstallDir -Recurse -Force
     }
 
+foreach ($fileName in $SkipWhenCopying) {
+    Remove-Item (Join-Path $InstallDir $fileName) -Force -ErrorAction SilentlyContinue
+}
+
+Get-ChildItem -Path $InstallDir -Filter "*.pdb" -File -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+
 if (-not (Test-Path $ExePath)) {
     throw "Installation failed: $ExePath was not created."
 }
 
-if (-not (Test-Path $LaunchCmdPath)) {
-    throw "Installation failed: PrintLabels.cmd was not copied to $LaunchCmdPath"
-}
-
-if (-not (Test-Path (Join-Path $InstallDir "PrintLabels.ps1"))) {
-    throw "Installation failed: PrintLabels.ps1 was not copied to the install folder."
-}
-
-Register-PrintLabelsContextMenu -LaunchCmdPath $LaunchCmdPath -IconPath (Join-Path $InstallDir "DeliveryNoteLabeler.ico") -ExePath $ExePath
+Register-PrintLabelsContextMenu -AppExePath $ExePath -IconPath (Join-Path $InstallDir "DeliveryNoteLabeler.ico")
 
 Write-Host ""
 Write-Host "Installation complete."
@@ -57,23 +70,34 @@ Write-Host "        (on Windows 11 this may appear under 'Show more options')"
 Write-Host ""
 Write-Host "Configure your Zebra printer in Settings before printing."
 
+function Get-PrintLabelsShellCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AppExePath
+    )
+
+    $placeholders = 1..9 | ForEach-Object { "`"%$_`"" }
+    return "`"$AppExePath`" $($placeholders -join ' ')"
+}
+
 function Register-PrintLabelsContextMenu {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$LaunchCmdPath,
+        [string]$AppExePath,
 
         [Parameter(Mandatory = $true)]
-        [string]$IconPath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ExePath
+        [string]$IconPath
     )
 
-    if (-not (Test-Path $IconPath)) {
-        $IconPath = "$ExePath,0"
+    if (-not (Test-Path $AppExePath)) {
+        throw "Delivery Note Labeler executable was not found: $AppExePath"
     }
 
-    $command = "`"$LaunchCmdPath`" %*"
+    if (-not (Test-Path $IconPath)) {
+        $IconPath = "$AppExePath,0"
+    }
+
+    $command = Get-PrintLabelsShellCommand -AppExePath $AppExePath
     $registryPaths = @(
         "Registry::HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.pdf\shell\PrintLabels",
         "Registry::HKEY_CURRENT_USER\Software\Classes\.pdf\shell\PrintLabels"

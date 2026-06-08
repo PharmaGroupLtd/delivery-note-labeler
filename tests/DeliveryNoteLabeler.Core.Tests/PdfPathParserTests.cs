@@ -83,6 +83,35 @@ public class PdfPathParserTests : IDisposable
         Assert.Contains(two, paths, StringComparer.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void ParseInitialPdfPaths_PreservesPathsWithSpaces()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"delivery-note-labeler scan-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        _tempFiles.Add(folder);
+
+        var pdf = Path.Combine(folder, "deliverynote004223 rev 1.pdf");
+        File.WriteAllBytes(pdf, "%PDF-1.4"u8.ToArray());
+        _tempFiles.Add(pdf);
+
+        var paths = PdfPathParser.ParseInitialPdfPaths([pdf]);
+
+        Assert.Single(paths);
+        Assert.Contains(pdf, paths, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseInitialPdfPaths_IgnoresUnusedExplorerPlaceholders()
+    {
+        var pdf = CreateTempPdf("one");
+        var args = new[] { pdf, string.Empty, string.Empty, string.Empty };
+
+        var paths = PdfPathParser.ParseInitialPdfPaths(args);
+
+        Assert.Single(paths);
+        Assert.Contains(pdf, paths, StringComparer.OrdinalIgnoreCase);
+    }
+
     private string CreateTempPdf(string name)
     {
         var path = Path.Combine(Path.GetTempPath(), $"delivery-note-labeler-{name}-{Guid.NewGuid():N}.pdf");

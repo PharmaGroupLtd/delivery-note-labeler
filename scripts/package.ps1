@@ -41,15 +41,14 @@ $releaseExcludeFiles = @(
     "Register-SparsePackage.ps1",
     "Trust-PackageCertificate.ps1",
     "Setup.ps1",
-    "DeliveryNoteLabelerPackage.cer"
+    "DeliveryNoteLabelerPackage.cer",
+    "PrintLabels.ps1"
 )
 
 $installFiles = @(
     "Install.ps1",
     "Install.cmd",
     "Uninstall.ps1",
-    "PrintLabels.cmd",
-    "PrintLabels.ps1",
     "README.txt"
 )
 

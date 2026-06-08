@@ -103,9 +103,21 @@ public static class PdfPathParser
 
         foreach (var arg in args)
         {
-            foreach (var token in SplitArgumentTokens(arg))
+            if (string.IsNullOrWhiteSpace(arg))
             {
-                AddPdfPath(token, seen, paths);
+                continue;
+            }
+
+            var trimmed = arg.Trim();
+            if (TryAddPdfPath(trimmed, seen, paths))
+            {
+                continue;
+            }
+
+            // Legacy PrintLabels.cmd passed multiple quoted paths in one argument.
+            foreach (var token in SplitArgumentTokens(trimmed))
+            {
+                TryAddPdfPath(token, seen, paths);
             }
         }
 
@@ -164,12 +176,12 @@ public static class PdfPathParser
         }
     }
 
-    private static void AddPdfPath(string rawPath, ISet<string> seen, IList<string> paths)
+    private static bool TryAddPdfPath(string rawPath, ISet<string> seen, IList<string> paths)
     {
         var cleaned = rawPath.Trim().Trim('"');
         if (string.IsNullOrEmpty(cleaned))
         {
-            return;
+            return false;
         }
 
         string fullPath;
@@ -179,24 +191,25 @@ public static class PdfPathParser
         }
         catch (IOException)
         {
-            return;
+            return false;
         }
         catch (ArgumentException)
         {
-            return;
+            return false;
         }
 
         if (!seen.Add(fullPath))
         {
-            return;
+            return true;
         }
 
         if (!fullPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
         {
-            return;
+            return false;
         }
 
         paths.Add(fullPath);
+        return true;
     }
 
     private static IEnumerable<string> FilterSwitchArguments(IEnumerable<string> args, string switchName)

@@ -30,6 +30,9 @@ public partial class App : Application
         };
 
         var initialPdfs = PdfPathParser.ResolveStartupPdfPaths(e.Args);
+        WritePrintLabelsLog(
+            $"Startup args ({e.Args.Length}): {string.Join(" | ", e.Args)}; "
+            + $"resolved PDFs ({initialPdfs.Count}): {string.Join(" | ", initialPdfs)}");
         _singleInstance = new SingleInstanceService();
 
         if (!_singleInstance.IsPrimaryInstance)
@@ -39,24 +42,12 @@ public partial class App : Application
             if (initialPdfs.Count == 0)
             {
                 WritePrintLabelsLog("Secondary instance received no PDF paths.");
-                MessageBox.Show(
-                    "Delivery Note Labeler could not read the selected PDF file paths.\n\n"
-                    + "Try Print Labels again. If this keeps happening, reinstall the latest version of the app.\n\n"
-                    + $"Details: {GetPrintLabelsLogPath()}",
-                    "Delivery Note Labeler",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
                 exitCode = 1;
             }
             else if (!_singleInstance.TryForwardToExistingInstance(initialPdfs))
             {
                 WritePrintLabelsLog(
                     $"Secondary instance could not forward {initialPdfs.Count} PDF path(s) to the running app.");
-                MessageBox.Show(
-                    "Delivery Note Labeler is still starting and could not receive the selected PDFs. Try Print Labels again.",
-                    "Delivery Note Labeler",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
                 exitCode = 1;
             }
             else
@@ -110,8 +101,36 @@ public partial class App : Application
         {
             ActivateExistingWindow(pendingPaths);
         }
+        else if (initialPdfs.Count == 0)
+        {
+            // Explorer can launch one process per selected PDF; wait briefly for forwarded paths.
+            await WaitForForwardedPdfPathsAsync();
+        }
 
         _ = CheckForUpdatesOnStartupAsync();
+    }
+
+    private async Task WaitForForwardedPdfPathsAsync()
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            await Task.Delay(100);
+
+            List<string> pendingPaths;
+            lock (_pendingPdfLock)
+            {
+                if (_pendingPdfPaths.Count == 0)
+                {
+                    continue;
+                }
+
+                pendingPaths = [.. _pendingPdfPaths];
+                _pendingPdfPaths.Clear();
+            }
+
+            ActivateExistingWindow(pendingPaths);
+            return;
+        }
     }
 
     private async Task CheckForUpdatesOnStartupAsync()
