@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.9",
+    "version":  "1.0.10",
     "releaseDate":  "2026-06-08",
-    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.9/DeliveryNoteLabeler-1.0.9-Setup.exe",
-    "releaseNotes":  "Fix Print Labels from Explorer right-click. Paths with spaces and multi-file selection now work reliably. Slimmer install package."
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.10/DeliveryNoteLabeler-1.0.10-Setup.exe",
+    "releaseNotes":  "Label layout update: part number now appears above the description on the right side of the label. Left column shows delivery number, order number, and quantity."
 }
