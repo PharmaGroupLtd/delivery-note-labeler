@@ -10,7 +10,12 @@ public static class AppVersion
 
     private static Version ResolveCurrentVersion()
     {
-        var assembly = typeof(AppVersion).Assembly;
+        var assembly = Assembly.GetEntryAssembly() ?? typeof(AppVersion).Assembly;
+        return ReadAssemblyVersion(assembly) ?? new Version(0, 0, 0);
+    }
+
+    private static Version? ReadAssemblyVersion(Assembly assembly)
+    {
         var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         if (!string.IsNullOrWhiteSpace(informational))
         {
@@ -22,7 +27,6 @@ public static class AppVersion
             }
         }
 
-        var assemblyVersion = assembly.GetName().Version;
-        return assemblyVersion ?? new Version(0, 0, 0);
+        return assembly.GetName().Version;
     }
 }

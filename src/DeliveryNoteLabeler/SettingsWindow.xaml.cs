@@ -16,6 +16,7 @@ public partial class SettingsWindow : Window
         LoadPrinters();
         LoadGeminiSettings();
         CurrentVersionLabel.Text = $"Installed version: {AppVersion.Display}";
+        InstallPathLabel.Text = $"Installed from: {Environment.ProcessPath ?? AppContext.BaseDirectory}";
         UpdateStatusLabel.Text = string.Empty;
     }
 

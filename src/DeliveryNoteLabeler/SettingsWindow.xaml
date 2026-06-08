@@ -94,6 +94,10 @@
 
                 <TextBlock x:Name="CurrentVersionLabel"
                            Style="{StaticResource CaptionText}" />
+                <TextBlock x:Name="InstallPathLabel"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap"
+                           Style="{StaticResource CaptionText}" />
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

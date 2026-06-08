@@ -12,15 +12,11 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
+. (Join-Path $PSScriptRoot "Get-ProjectVersion.ps1")
+
 $project = Join-Path $ProjectRoot "src\DeliveryNoteLabeler\DeliveryNoteLabeler.csproj"
 if (-not $Version) {
-    [xml]$projectXml = Get-Content $project
-    $Version = ($projectXml.Project.PropertyGroup |
-        Where-Object { $_.Version } |
-        Select-Object -First 1).Version
-    if (-not $Version) {
-        $Version = "1.0.0"
-    }
+    $Version = Get-ProjectVersion -ProjectRoot $ProjectRoot
 }
 
 $publishDir = Join-Path $ProjectRoot "dist\publish"

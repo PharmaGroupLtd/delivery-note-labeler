@@ -24,6 +24,7 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
 . (Join-Path $PSScriptRoot "GitHubCli.ps1")
+. (Join-Path $PSScriptRoot "Get-ProjectVersion.ps1")
 
 $githubRepoFile = Join-Path $ProjectRoot "packaging\update\github-repo.txt"
 if (-not $Repo) {
@@ -36,13 +37,7 @@ if (-not $Repo) {
 
 $project = Join-Path $ProjectRoot "src\DeliveryNoteLabeler\DeliveryNoteLabeler.csproj"
 if (-not $Version) {
-    [xml]$projectXml = Get-Content $project
-    $Version = ($projectXml.Project.PropertyGroup |
-        Where-Object { $_.Version } |
-        Select-Object -First 1).Version
-    if (-not $Version) {
-        throw "Could not determine app version from $project"
-    }
+    $Version = Get-ProjectVersion -ProjectRoot $ProjectRoot
 }
 
 $setupName = "DeliveryNoteLabeler-$Version-Setup.exe"
