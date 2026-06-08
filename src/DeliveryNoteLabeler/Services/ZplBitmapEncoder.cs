@@ -13,7 +13,7 @@ internal static class ZplBitmapEncoder
     private const int SuperSampleFactor = 3;
     private const byte DarkInkThreshold = 220;
 
-    public static ZplEmbeddedGraphic? CreateLogoGraphic(string imagePath, LabelLayoutOptions layout)
+    public static ZplEmbeddedGraphic? CreateLogoGraphic(string imagePath, LabelLayoutOptions layout, int contentTopDots)
     {
         if (!File.Exists(imagePath))
         {
@@ -27,7 +27,7 @@ internal static class ZplBitmapEncoder
             return null;
         }
 
-        var (maxWidth, maxHeight) = LabelLayoutMetrics.GetLogoBounds(layout);
+        var (maxWidth, maxHeight) = LabelLayoutMetrics.GetLogoBounds(layout, contentTopDots);
         var scale = Math.Min(maxWidth / (double)crop.Width, maxHeight / (double)crop.Height);
         var width = Math.Max(1, (int)Math.Round(crop.Width * scale));
         var height = Math.Max(1, (int)Math.Round(crop.Height * scale));
@@ -66,7 +66,7 @@ internal static class ZplBitmapEncoder
         }
 
         var data = ExtractSolidBlackGraphic(superSampled, width, height);
-        var (originX, originY) = LabelLayoutMetrics.GetLogoOrigin(layout, width, height);
+        var (originX, originY) = LabelLayoutMetrics.GetLogoOrigin(layout, width, height, contentTopDots);
         var bytesPerRow = (width + 7) / 8;
         var totalBytes = data.Length;
         var hex = Convert.ToHexString(data);

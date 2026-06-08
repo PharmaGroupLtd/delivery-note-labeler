@@ -23,7 +23,7 @@ public static class ZplGenerator
     {
         layout ??= LabelLayoutOptions.Default;
 
-        var sections = BuildLabelSections(layout, logo);
+        var sections = BuildLabelSections(layout);
 
         var builder = new StringBuilder();
         builder.AppendLine("^XA");
@@ -113,6 +113,28 @@ public static class ZplGenerator
         return BuildLabelZpl(CreateSampleLabelJob(), layout, logo);
     }
 
+    /// <summary>
+    /// Top edge of the bordered content block, anchored above the footer at the bottom of the label.
+    /// </summary>
+    public static int GetContentTopDots(LabelLayoutOptions layout)
+    {
+        var contentBlockHeight = GetContentBlockHeightDots();
+        var footerHeight = GetFooterSectionHeight();
+        var footerY = LabelLayoutMetrics.GetAnchoredFooterY(layout, footerHeight);
+        return footerY - contentBlockHeight - LabelLayoutMetrics.SectionGapDots;
+    }
+
+    private static int GetContentBlockHeightDots()
+    {
+        var standardHeight = GetLabelValueSectionHeight(LabelFontHeight, ValueFontHeight, StandardMaxValueLines);
+        var quantityHeight = GetLabelValueSectionHeight(
+            QuantityLabelFontHeight,
+            QuantityValueFontHeight,
+            QuantityMaxValueLines);
+
+        return standardHeight + standardHeight + quantityHeight;
+    }
+
     private sealed record SectionRect(int X, int Y, int Width, int Height)
     {
         public int InnerX(int padding) => X + padding;
@@ -135,7 +157,7 @@ public static class ZplGenerator
         int DividerX,
         int DescriptionMaxLines);
 
-    private static LabelSections BuildLabelSections(LabelLayoutOptions layout, ZplEmbeddedGraphic? logo)
+    private static LabelSections BuildLabelSections(LabelLayoutOptions layout)
     {
         var padding = LabelLayoutMetrics.SectionPaddingDots;
         var leftX = LabelLayoutMetrics.LeftColumnX(layout);
@@ -145,20 +167,21 @@ public static class ZplGenerator
         var dividerX = rightX;
 
         var headerY = LabelLayoutMetrics.ScaleY(layout, LabelLayoutMetrics.HeaderYDots);
-        var headerHeight = GetHeaderSectionHeight(layout, logo);
-        var header = new SectionRect(
-            LabelLayoutMetrics.EdgeMarginDots,
-            headerY,
-            layout.WidthDots - (LabelLayoutMetrics.EdgeMarginDots * 2),
-            headerHeight);
-
-        var contentTop = header.Y + header.Height;
         var standardHeight = GetLabelValueSectionHeight(LabelFontHeight, ValueFontHeight, StandardMaxValueLines);
         var quantityHeight = GetLabelValueSectionHeight(
             QuantityLabelFontHeight,
             QuantityValueFontHeight,
             QuantityMaxValueLines);
         var footerHeight = GetFooterSectionHeight();
+        var contentBlockHeight = standardHeight + standardHeight + quantityHeight;
+        var footerY = LabelLayoutMetrics.GetAnchoredFooterY(layout, footerHeight);
+        var contentBottom = footerY;
+        var contentTop = footerY - contentBlockHeight - LabelLayoutMetrics.SectionGapDots;
+        var header = new SectionRect(
+            LabelLayoutMetrics.EdgeMarginDots,
+            headerY,
+            layout.WidthDots - (LabelLayoutMetrics.EdgeMarginDots * 2),
+            Math.Max(1, contentTop - headerY));
 
         var partNumber = new SectionRect(rightX, contentTop, rightWidth, standardHeight);
         var deliveryNumber = new SectionRect(leftX, contentTop, leftWidth, standardHeight);
@@ -173,8 +196,6 @@ public static class ZplGenerator
             leftWidth,
             quantityHeight);
 
-        var footerY = quantity.Y + quantity.Height;
-        var contentBottom = footerY;
         var footer = new SectionRect(
             LabelLayoutMetrics.EdgeMarginDots,
             footerY,
@@ -200,20 +221,6 @@ public static class ZplGenerator
             contentBottom,
             dividerX,
             descriptionMaxLines);
-    }
-
-    private static int GetHeaderSectionHeight(LabelLayoutOptions layout, ZplEmbeddedGraphic? logo)
-    {
-        var padding = LabelLayoutMetrics.SectionPaddingDots;
-        var headerY = LabelLayoutMetrics.ScaleY(layout, LabelLayoutMetrics.HeaderYDots);
-
-        if (logo is null)
-        {
-            return padding * 2;
-        }
-
-        var contentBottom = logo.OriginY + logo.HeightDots;
-        return Math.Max(1, contentBottom - headerY + padding);
     }
 
     private static int GetFooterSectionHeight() =>

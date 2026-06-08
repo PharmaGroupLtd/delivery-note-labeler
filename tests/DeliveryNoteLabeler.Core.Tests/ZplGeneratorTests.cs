@@ -110,6 +110,20 @@ public class ZplGeneratorTests
     }
 
     [Fact]
+    public void BuildLabelZpl_AnchorsFooterAndContentToBottomOfLabel()
+    {
+        var job = ZplGenerator.CreateSampleLabelJob();
+        var zpl = ZplGenerator.BuildLabelZpl(job);
+        var contentTop = ZplGenerator.GetContentTopDots(LabelLayoutOptions.Default);
+        var madeInUkY = GetFieldOriginY(zpl, "MADE IN UK");
+        var partNumberY = GetFieldOriginY(zpl, "PART NUMBER:");
+
+        Assert.True(contentTop > 100, "Bordered content should sit in the lower half of the label.");
+        Assert.True(partNumberY >= contentTop, "Part number section should start at the anchored content block.");
+        Assert.True(madeInUkY >= LabelLayoutOptions.DefaultHeightDots - 40, "Footer should sit at the bottom of the label.");
+    }
+
+    [Fact]
     public void BuildLabelZpl_PlacesPartNumberAboveDescriptionOnRightColumn()
     {
         var job = new LabelJob

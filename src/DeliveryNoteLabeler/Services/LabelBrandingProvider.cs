@@ -17,6 +17,8 @@ internal static class LabelBrandingProvider
             ? File.GetLastWriteTimeUtc(logoPath)
             : DateTime.MinValue;
 
+        var contentTop = ZplGenerator.GetContentTopDots(layout);
+
         if (_cachedLogo is not null &&
             _cachedLayout is not null &&
             _cachedLayout.WidthDots == layout.WidthDots &&
@@ -27,7 +29,7 @@ internal static class LabelBrandingProvider
             return _cachedLogo;
         }
 
-        _cachedLogo = ZplBitmapEncoder.CreateLogoGraphic(logoPath, layout);
+        _cachedLogo = ZplBitmapEncoder.CreateLogoGraphic(logoPath, layout, contentTop);
         _cachedLayout = layout;
         _cachedWriteTimeUtc = writeTimeUtc;
         _cachedLogoPath = logoPath;
