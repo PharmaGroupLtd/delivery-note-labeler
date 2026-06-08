@@ -1,0 +1,100 @@
+<Window x:Class="DeliveryNoteLabeler.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings"
+        Height="580"
+        Width="520"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Bottom"
+                Background="{StaticResource PanelBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushStandard}"
+                BorderThickness="0,1,0,0"
+                Padding="12,10">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button Content="Cancel"
+                        Style="{StaticResource StandardButton}"
+                        MinWidth="88"
+                        Margin="0,0,8,0"
+                        IsCancel="True" />
+                <Button Content="Save"
+                        Style="{StaticResource PrimaryButton}"
+                        MinWidth="88"
+                        IsDefault="True"
+                        Click="Save_Click" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="16">
+                <TextBlock Text="Label printer"
+                           Style="{StaticResource SectionHeaderText}" />
+                <TextBlock Margin="0,6,0,10"
+                           TextWrapping="Wrap"
+                           Style="{StaticResource CaptionText}"
+                           Text="Install the shared GK420d from your print host (for example \\PrintHost\ZebraLabels), then select it here. The app sends RAW ZPL directly to the queue." />
+
+                <ComboBox x:Name="PrinterCombo"
+                          MinHeight="28"
+                          IsEditable="True"
+                          Margin="0,0,0,8" />
+
+                <StackPanel Orientation="Horizontal"
+                            Margin="0,0,0,16">
+                    <Button Content="Test print"
+                            Style="{StaticResource StandardButton}"
+                            MinWidth="96"
+                            Margin="0,0,8,0"
+                            Click="TestPrint_Click" />
+                    <TextBlock x:Name="PrinterStatusLabel"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource CaptionText}" />
+                </StackPanel>
+
+                <Separator Margin="0,0,0,16" />
+
+                <TextBlock Text="Gemini API key"
+                           Style="{StaticResource SectionHeaderText}" />
+                <TextBlock Margin="0,6,0,10"
+                           TextWrapping="Wrap"
+                           Style="{StaticResource CaptionText}"
+                           Text="Used automatically when normal scan cannot read a PDF. Get a key at aistudio.google.com/apikey. If AI scan fails with quota limit: 0, link billing in AI Studio, then create a new key." />
+
+                <TextBox x:Name="ApiKeyBox"
+                         Style="{StaticResource StandardTextBox}" />
+
+                <TextBlock x:Name="CurrentKeyLabel"
+                           Margin="0,8,0,0"
+                           Style="{StaticResource CaptionText}"
+                           Visibility="Collapsed" />
+
+                <Separator Margin="0,16,0,16" />
+
+                <TextBlock Text="Updates"
+                           Style="{StaticResource SectionHeaderText}" />
+                <TextBlock Margin="0,6,0,10"
+                           TextWrapping="Wrap"
+                           Style="{StaticResource CaptionText}"
+                           Text="The app checks online for a newer installer when it starts. You can also check manually here." />
+
+                <StackPanel Orientation="Horizontal"
+                            Margin="0,0,0,8">
+                    <Button Content="Check for updates"
+                            Style="{StaticResource StandardButton}"
+                            MinWidth="132"
+                            Margin="0,0,8,0"
+                            Click="CheckForUpdates_Click" />
+                    <TextBlock x:Name="UpdateStatusLabel"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource CaptionText}" />
+                </StackPanel>
+
+                <TextBlock x:Name="CurrentVersionLabel"
+                           Style="{StaticResource CaptionText}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

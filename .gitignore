@@ -1,0 +1,112 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Tt]est[Rr]esults/
+[Bb]uild/
+[Dd]ist/
+[Aa]rtifacts/
+out/
+
+# Release / packaging staging (generated locally; publish via GitHub Releases)
+tools/SetupLauncher/DeliveryNoteLabeler-package.zip
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+*.nuget.props
+*.nuget.targets
+*.cache
+*.dll.config
+*.exe.config
+*.pdb
+*.mdb
+*.opendb
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio / Rider
+.vs/
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+.idea/
+*.sln.iml
+
+# VS Code (keep shared settings if you add them later)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.cache
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Secrets and local config (never commit API keys)
+.env
+.env.*
+*.pfx
+*.p12
+secrets.json
+**/appsettings.Development.json
+
+# User-specific app config lives outside the repo:
+#   %USERPROFILE%\.delivery-note-labeler\config.json
+
+# Local certificates from sparse-package dev signing
+*.cer
+DeliveryNoteLabelerPackage.cer
+
+# Generated sparse / shell extension publish artifacts (rebuilt by scripts)
+**/DeliveryNoteLabeler.Sparse.unsigned.msix
+**/DeliveryNoteLabelerShell.lib
+**/DeliveryNoteLabelerShell.exp
+
+# Test / coverage
+coverage/
+*.coverage
+*.coveragexml
+TestResult.xml
+*.trx
+
+# Logs and crash dumps
+*.log
+*.dmp
+*.stackdump
+
+# Legacy Python (removed from project)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Cursor / local editor state (optional)
+.cursor/

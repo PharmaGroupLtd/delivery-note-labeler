@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delivery Note Labeler</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      max-width: 720px;
+      margin: 48px auto;
+      padding: 0 20px;
+      color: #1f1f1f;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 8px; }
+    .card {
+      border: 1px solid #d6d6d6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 24px;
+      background: #fafafa;
+    }
+    a.button {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 10px 16px;
+      background: #005fb8;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    code { background: #efefef; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Delivery Note Labeler</h1>
+  <p>Windows desktop app for scanning Pharma Sheet Metal delivery note PDFs and printing GK420d labels.</p>
+
+  <div class="card">
+    <h2>Download</h2>
+    <p id="version-line">Checking for the latest version…</p>
+    <p id="notes"></p>
+    <a id="download-link" class="button" href="#">Download installer</a>
+  </div>
+
+  <div class="card">
+    <h2>Install</h2>
+    <ol>
+      <li>Download <code>DeliveryNoteLabeler-*-Setup.exe</code>.</li>
+      <li>Double-click it on each Windows 10/11 PC.</li>
+      <li>Open <strong>Settings</strong> in the app and configure your shared Zebra printer.</li>
+    </ol>
+    <p>Installed apps check this page automatically for updates and show a popup when a newer version is available.</p>
+  </div>
+
+  <script>
+    const manifestUrl = "./latest.json";
+
+    fetch(manifestUrl)
+      .then((response) => response.json())
+      .then((manifest) => {
+        document.getElementById("version-line").textContent =
+          `Latest version: ${manifest.version} (${manifest.releaseDate || "release"})`;
+        document.getElementById("notes").textContent = manifest.releaseNotes || "";
+        const link = document.getElementById("download-link");
+        link.href = manifest.downloadUrl;
+        link.textContent = `Download ${manifest.version}`;
+      })
+      .catch(() => {
+        document.getElementById("version-line").textContent =
+          "Could not load latest.json. Use the GitHub Releases page instead.";
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+﻿<Window x:Class="DeliveryNoteLabeler.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:DeliveryNoteLabeler.ViewModels"
+        mc:Ignorable="d"
+        Title="Delivery Note Labeler"
+        Height="720"
+        Width="1080"
+        MinHeight="600"
+        MinWidth="900"
+        AllowDrop="True"
+        Drop="OnDrop"
+        DragEnter="OnDragEnter"
+        DragLeave="OnDragLeave">
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Top"
+                Background="{StaticResource PanelBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushStandard}"
+                BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Browse PDF"
+                            Style="{StaticResource StandardButton}"
+                            Margin="0,0,8,0"
+                            Command="{Binding BrowseCommand}" />
+                    <Button Content="Print"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,8,0"
+                            Command="{Binding PrintCommand}" />
+                    <Button Content="Print All"
+                            Style="{StaticResource StandardButton}"
+                            Margin="0,0,8,0"
+                            Command="{Binding PrintAllCommand}" />
+                    <Button Content="Export CSV"
+                            Style="{StaticResource StandardButton}"
+                            Margin="0,0,8,0"
+                            Command="{Binding ExportCommand}" />
+                    <Button Content="Settings"
+                            Style="{StaticResource StandardButton}"
+                            Command="{Binding SettingsCommand}" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding QueueSummaryLabel}"
+                           Style="{StaticResource CaptionText}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Border x:Name="StatusBorder"
+                DockPanel.Dock="Bottom"
+                Background="{StaticResource StatusBarBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushStandard}"
+                BorderThickness="0,1,0,0"
+                Padding="12,7">
+            <TextBlock Text="{Binding StatusMessage}"
+                       VerticalAlignment="Center">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding StatusIsBold}" Value="True">
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StatusIsError}" Value="True">
+                                <Setter Property="Foreground" Value="#C42B1C" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
+
+        <Grid Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Width="280"
+                    BorderBrush="{StaticResource BorderBrushStandard}"
+                    BorderThickness="1"
+                    Background="{StaticResource PanelBackgroundBrush}"
+                    Visibility="{Binding ShowQueuePanel, Converter={StaticResource BoolToVisibilityConverter}}">
+                <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Delivery note queue"
+                               Style="{StaticResource SectionHeaderText}"
+                               Margin="12,10,12,8" />
+
+                    <ListBox ItemsSource="{Binding QueueItems}"
+                             SelectedItem="{Binding SelectedQueueItem}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:QueueItemViewModel}">
+                                <StackPanel Margin="0,2">
+                                    <TextBlock Text="{Binding DisplayTitle}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding DisplaySubtitle}"
+                                               Style="{StaticResource CaptionText}"
+                                               Margin="0,2,0,0"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StatusLabel}"
+                                               Style="{StaticResource CaptionText}"
+                                               Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Grid Grid.Column="1"
+                  Width="12"
+                  Visibility="{Binding ShowQueuePanel, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="{Binding FileLabel}"
+                               Style="{StaticResource SectionHeaderText}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding FooterLabel}"
+                               Style="{StaticResource CaptionText}"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <Grid Grid.Row="1">
+                    <Border BorderBrush="{StaticResource BorderBrushStandard}"
+                            BorderThickness="1"
+                            Background="White"
+                            Visibility="{Binding HasLabelRows, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <DataGrid ItemsSource="{Binding LabelRows}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  CanUserReorderColumns="False"
+                                  CanUserResizeRows="True"
+                                  CanUserSortColumns="False"
+                                  SelectionMode="Single"
+                                  SelectionUnit="FullRow"
+                                  GridLinesVisibility="Horizontal">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Drawing No."
+                                                    Binding="{Binding DrawingNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Width="160" />
+                                <DataGridTextColumn Header="Copy"
+                                                    Binding="{Binding Copy, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                    Width="72">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Line Qty"
+                                                    Binding="{Binding LineQty, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                    Width="88">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Description"
+                                                    Binding="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextWrapping" Value="Wrap" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="TextWrapping" Value="Wrap" />
+                                            <Setter Property="AcceptsReturn" Value="True" />
+                                            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <Border BorderBrush="{StaticResource BorderBrushStandard}"
+                            BorderThickness="1"
+                            Background="White"
+                            Visibility="{Binding ShowDetailPlaceholder, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{Binding DetailPlaceholder}"
+                                   Style="{StaticResource CaptionText}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Margin="24" />
+                    </Border>
+                </Grid>
+
+                <Separator Grid.Row="2" Margin="0,12,0,12" />
+
+                <Border Grid.Row="3"
+                        BorderBrush="{StaticResource BorderBrushStandard}"
+                        BorderThickness="1"
+                        Background="{StaticResource PanelBackgroundBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="12,10">
+                            <TextBlock Text="Delivery note" Style="{StaticResource CaptionText}" />
+                            <TextBlock Text="{Binding DeliveryNoteStat}" Style="{StaticResource StatValueText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <Rectangle Grid.Column="1" Width="1" Fill="{StaticResource BorderBrushStandard}" Margin="0,8" />
+
+                        <StackPanel Grid.Column="2" Margin="12,10">
+                            <TextBlock Text="Order no." Style="{StaticResource CaptionText}" />
+                            <TextBlock Text="{Binding OrderStat}" Style="{StaticResource StatValueText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <Rectangle Grid.Column="3" Width="1" Fill="{StaticResource BorderBrushStandard}" Margin="0,8" />
+
+                        <StackPanel Grid.Column="4" Margin="12,10">
+                            <TextBlock Text="Line items" Style="{StaticResource CaptionText}" />
+                            <TextBlock Text="{Binding LinesStat}" Style="{StaticResource StatValueText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <Rectangle Grid.Column="5" Width="1" Fill="{StaticResource BorderBrushStandard}" Margin="0,8" />
+
+                        <StackPanel Grid.Column="6" Margin="12,10">
+                            <TextBlock Text="Labels" Style="{StaticResource CaptionText}" />
+                            <TextBlock Text="{Binding LabelsStat}" Style="{StaticResource StatValueText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>
