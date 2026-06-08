@@ -39,6 +39,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private bool _canBrowse = true;
     private bool _canPrint;
     private bool _canPrintAll;
+    private bool _canScanWithAi;
+    private bool _showScanWithAiButton;
     private string _deliveryNoteStat = "—";
     private string _orderStat = "—";
     private string _linesStat = "—";
@@ -145,6 +147,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
         private set => SetField(ref _canPrintAll, value);
     }
 
+    public bool CanScanWithAi
+    {
+        get => _canScanWithAi;
+        private set => SetField(ref _canScanWithAi, value);
+    }
+
+    public bool ShowScanWithAiButton
+    {
+        get => _showScanWithAiButton;
+        private set => SetField(ref _showScanWithAiButton, value);
+    }
+
     public string DeliveryNoteStat
     {
         get => _deliveryNoteStat;
@@ -186,6 +200,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public RelayCommand PrintAllCommand { get; }
     public RelayCommand AddLabelLineCommand { get; }
     public RelayCommand DeleteLabelLineCommand { get; }
+    public RelayCommand ScanWithAiCommand { get; }
 
     public MainViewModel()
     {
@@ -196,6 +211,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         PrintAllCommand = new RelayCommand(PrintAllReady, () => CanPrintAll);
         AddLabelLineCommand = new RelayCommand(AddLabelLine, () => CanEditLabelRows);
         DeleteLabelLineCommand = new RelayCommand(DeleteSelectedLabelLine, () => CanDeleteLabelLine);
+        ScanWithAiCommand = new RelayCommand(ScanWithAi, () => CanScanWithAi);
     }
 
     private bool CanEditLabelRows =>
@@ -342,7 +358,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             if (AppConfig.GeminiFallbackAvailable())
             {
-                SetStatus("Gemini API key saved.", success: true);
+                SetStatus(
+                    SelectedQueueItem?.Status == QueueItemStatus.Failed
+                        ? "Gemini API key saved. Use Scan with AI to retry this delivery note."
+                        : "Gemini API key saved.",
+                    success: true);
             }
             else if (AppConfig.IsPrinterConfigured())
             {
@@ -720,7 +740,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 DetailPlaceholder = item.ErrorMessage ?? "This delivery note could not be scanned.";
                 ClearDetailData();
                 FileLabel = item.FileName;
-                FooterLabel = "Scan failed";
+                FooterLabel = "Scan failed — try Scan with AI";
                 SetStatus(item.ErrorMessage ?? "Could not parse PDF.", error: true);
                 break;
 
@@ -771,6 +791,78 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private int PendingScanCount() =>
         QueueItems.Count(item => item.Status is QueueItemStatus.Waiting or QueueItemStatus.Scanning);
 
+    private void ScanWithAi()
+    {
+        var item = SelectedQueueItem;
+        if (item?.Status != QueueItemStatus.Failed || _scanOrchestrationRunning || _printInProgress)
+        {
+            return;
+        }
+
+        if (!AppConfig.GeminiFallbackAvailable())
+        {
+            SetStatus("Add a Gemini API key in Settings to scan with AI.", error: true);
+            OpenSettingsFromCommand();
+            return;
+        }
+
+        _ = ScanQueueItemWithAiAsync(item);
+    }
+
+    private async Task ScanQueueItemWithAiAsync(QueueItemViewModel item)
+    {
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            item.ErrorMessage = null;
+            item.Status = QueueItemStatus.Scanning;
+            UpdateQueueSummary();
+            SetStatus($"Scanning {item.FileName} with AI…", muted: true);
+            UpdateCommandStates();
+        });
+
+        try
+        {
+            var (note, jobs) = await Task.Run(() =>
+                _pipeline.ExtractLabelJobsWithAi(
+                    item.PdfPath,
+                    message => Application.Current.Dispatcher.Invoke(() =>
+                        SetStatus($"Scanning {item.FileName} with AI… {message}", muted: true)))).ConfigureAwait(false);
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                item.Note = note;
+                item.Jobs = jobs;
+                item.Status = QueueItemStatus.Ready;
+                item.ErrorMessage = null;
+                UpdateQueueSummary();
+                DisplaySelectedQueueItem();
+                UpdateCommandStates();
+            });
+        }
+        catch (ExtractionException ex)
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                item.Status = QueueItemStatus.Failed;
+                item.ErrorMessage = ex.Message;
+                UpdateQueueSummary();
+                DisplaySelectedQueueItem();
+                UpdateCommandStates();
+            });
+        }
+        catch (Exception ex)
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                item.Status = QueueItemStatus.Failed;
+                item.ErrorMessage = $"Unexpected error: {ex.Message}";
+                UpdateQueueSummary();
+                DisplaySelectedQueueItem();
+                UpdateCommandStates();
+            });
+        }
+    }
+
     private void UpdateCommandStates()
     {
         var printerConfigured = AppConfig.IsPrinterConfigured();
@@ -781,6 +873,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
             && QueueItems.Any(item => item.CanPrint)
             && !_printInProgress;
         CanExport = SelectedQueueItem?.Status == QueueItemStatus.Ready && LabelRows.Count > 0;
+        ShowScanWithAiButton = SelectedQueueItem?.Status == QueueItemStatus.Failed;
+        CanScanWithAi = ShowScanWithAiButton
+            && !_scanOrchestrationRunning
+            && !_printInProgress;
 
         BrowseCommand.RaiseCanExecuteChanged();
         ExportCommand.RaiseCanExecuteChanged();
@@ -788,6 +884,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         PrintAllCommand.RaiseCanExecuteChanged();
         AddLabelLineCommand.RaiseCanExecuteChanged();
         DeleteLabelLineCommand.RaiseCanExecuteChanged();
+        ScanWithAiCommand.RaiseCanExecuteChanged();
     }
 
     private void OpenSettingsFromCommand()

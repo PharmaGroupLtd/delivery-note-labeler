@@ -36,6 +36,16 @@ foreach (var page in document.GetPages())
         {
             Console.WriteLine($"  {item.LineNo}. {item.PartNo} | {item.DrawingNo} | qty {item.Quantity}");
         }
+
+        var merged = PdfTextParser.MergeWrappedLineItems(text);
+        Console.WriteLine("Merged PSM lines:");
+        foreach (var line in merged.Split('\n'))
+        {
+            if (line.Contains("PSM", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"  > {line}");
+            }
+        }
     }
     catch (ExtractionException ex)
     {

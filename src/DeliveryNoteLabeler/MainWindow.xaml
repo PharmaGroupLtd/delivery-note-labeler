@@ -42,6 +42,11 @@
                             Style="{StaticResource StandardButton}"
                             Margin="0,0,8,0"
                             Command="{Binding ExportCommand}" />
+                    <Button Content="Scan with AI"
+                            Style="{StaticResource StandardButton}"
+                            Margin="0,0,8,0"
+                            Command="{Binding ScanWithAiCommand}"
+                            Visibility="{Binding ShowScanWithAiButton, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <Button Content="Settings"
                             Style="{StaticResource StandardButton}"
                             Command="{Binding SettingsCommand}" />
@@ -239,13 +244,20 @@
                             BorderThickness="1"
                             Background="White"
                             Visibility="{Binding ShowDetailPlaceholder, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <TextBlock Text="{Binding DetailPlaceholder}"
-                                   Style="{StaticResource CaptionText}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   TextAlignment="Center"
-                                   Margin="24" />
+                        <StackPanel HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="24">
+                            <TextBlock Text="{Binding DetailPlaceholder}"
+                                       Style="{StaticResource CaptionText}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center" />
+                            <Button Content="Scan with AI"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Margin="0,16,0,0"
+                                    HorizontalAlignment="Center"
+                                    Command="{Binding ScanWithAiCommand}"
+                                    Visibility="{Binding ShowScanWithAiButton, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        </StackPanel>
                     </Border>
                 </Grid>
 

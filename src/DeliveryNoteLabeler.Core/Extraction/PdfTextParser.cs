@@ -7,10 +7,14 @@ namespace DeliveryNoteLabeler.Core.Extraction;
 public static partial class PdfTextParser
 {
     public const string StatusScanningNormal = "Scanning with normal mode…";
-    public const string StatusScanningAi = "No readable text found — scanning with AI…";
+    public const string StatusScanningAi = "Normal scan could not read this PDF — trying AI…";
 
     private const string DrawingNoPattern =
         @"(?:\d{5,9}\s+REV\s+[A-Z0-9]+|\d{2,}(?:-[A-Z0-9]+){2,})";
+
+    private static readonly Regex LineItemRevColumnRegex = new(
+        @"^(\d+)\.\s+(PSM-\d+)\s+(.+)\s+(\d{5,9})\s+([A-Z0-9]+)\s+(\d+)\s*(?:ea|each)?(?:\s+(.+))?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex LineItemTailRegex = new(
         @"^(\d+)\.\s+(PSM-\d+)\s+(.+)\s+(\d+)\s*(?:ea|each)?\s*$",
@@ -24,7 +28,7 @@ public static partial class PdfTextParser
         @"^(\d+\.\s+PSM-\d+\s+)(.+?)(\s+" + DrawingNoPattern + @")(\s+\d+\s*(?:ea|each)?)(?:\s+(.+))?$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    [GeneratedRegex(@"Delivery Note (?:No|Number)[.:]?\s*([^\n\r]+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"Delivery Note (?:No|Number)[.:]?\s*([^\n\r)]+)", RegexOptions.IgnoreCase)]
     private static partial Regex DeliveryNoteNoPattern();
 
     [GeneratedRegex(@"Customer Order No[.:]?\s*(\S+)", RegexOptions.IgnoreCase)]
@@ -58,9 +62,19 @@ public static partial class PdfTextParser
             return string.Empty;
         }
 
+        var shiftedFont = PharmaFontEncoding.LooksLikeShiftedEncoding(text);
+        text = PharmaFontEncoding.DecodeIfNeeded(text);
+
         var normalized = text.Replace('\u00A0', ' ').Replace("\r\n", "\n").Replace('\r', '\n');
+        if (shiftedFont)
+        {
+            normalized = normalized.Replace(')', '\n');
+            normalized = normalized.Replace('?', ' ');
+        }
+
         normalized = LabelValueLineBreakPattern().Replace(normalized, "${label} ${value}");
         normalized = Regex.Replace(normalized, "[ \t]+", " ");
+        normalized = Regex.Replace(normalized, "\n+", "\n");
         return normalized.Trim();
     }
 
@@ -169,43 +183,79 @@ public static partial class PdfTextParser
             return false;
         }
 
-        var match = LineItemTailRegex.Match(line);
-        if (!match.Success)
+        var match = LineItemRevColumnRegex.Match(line);
+        if (match.Success)
         {
-            return false;
+            if (!int.TryParse(match.Groups[1].Value, out var revLineNo)
+                || !int.TryParse(match.Groups[6].Value, out var revQuantity))
+            {
+                return false;
+            }
+
+            var descriptionText = match.Groups[3].Value.Trim();
+            if (match.Groups[7].Success)
+            {
+                var trailingDescription = match.Groups[7].Value.Trim();
+                if (!string.IsNullOrEmpty(trailingDescription))
+                {
+                    descriptionText = $"{descriptionText} {trailingDescription}".Trim();
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(descriptionText))
+            {
+                return false;
+            }
+
+            item = new LineItem
+            {
+                LineNo = revLineNo,
+                PartNo = match.Groups[2].Value.ToUpperInvariant(),
+                Description = descriptionText,
+                DrawingNo = $"{match.Groups[4].Value.Trim().ToUpperInvariant()} REV {match.Groups[5].Value.Trim().ToUpperInvariant()}",
+                Quantity = revQuantity,
+            };
+
+            return true;
         }
 
-        if (!int.TryParse(match.Groups[1].Value, out var lineNo)
-            || !int.TryParse(match.Groups[4].Value, out var quantity))
+        match = LineItemTailRegex.Match(line);
+        if (match.Success)
         {
-            return false;
+            if (!int.TryParse(match.Groups[1].Value, out var lineNo)
+                || !int.TryParse(match.Groups[4].Value, out var quantity))
+            {
+                return false;
+            }
+
+            var partNo = match.Groups[2].Value.ToUpperInvariant();
+            var body = match.Groups[3].Value.Trim();
+            var drawingMatch = DrawingNoAtEndRegex.Match(body);
+            if (!drawingMatch.Success)
+            {
+                return false;
+            }
+
+            var drawingNo = drawingMatch.Value.Trim().ToUpperInvariant();
+            var description = body[..drawingMatch.Index].Trim().TrimEnd('-').Trim();
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                return false;
+            }
+
+            item = new LineItem
+            {
+                LineNo = lineNo,
+                PartNo = partNo,
+                Description = description,
+                DrawingNo = drawingNo,
+                Quantity = quantity,
+            };
+
+            return true;
         }
 
-        var partNo = match.Groups[2].Value.ToUpperInvariant();
-        var body = match.Groups[3].Value.Trim();
-        var drawingMatch = DrawingNoAtEndRegex.Match(body);
-        if (!drawingMatch.Success)
-        {
-            return false;
-        }
-
-        var drawingNo = drawingMatch.Value.Trim().ToUpperInvariant();
-        var description = body[..drawingMatch.Index].Trim().TrimEnd('-').Trim();
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return false;
-        }
-
-        item = new LineItem
-        {
-            LineNo = lineNo,
-            PartNo = partNo,
-            Description = description,
-            DrawingNo = drawingNo,
-            Quantity = quantity,
-        };
-
-        return true;
+        return false;
     }
 
     public static HeaderFields ParseHeader(string pageText)
@@ -246,7 +296,7 @@ public static partial class PdfTextParser
         return new HeaderFields
         {
             DeliveryNoteNo = deliveryMatch.Groups[1].Value.Trim(),
-            CustomerOrderNo = customerOrderMatch.Groups[1].Value.Trim(),
+            CustomerOrderNo = customerOrderMatch.Groups[1].Value.Trim().TrimStart(':', '?'),
             SalesOrderNo = salesOrderMatch.Success ? salesOrderMatch.Groups[1].Value.Trim() : null,
             CustomerReference = customerRefMatch.Success ? customerRefMatch.Groups[1].Value.Trim() : null,
             Date = dateMatch.Success ? dateMatch.Groups[1].Value.Trim() : null,

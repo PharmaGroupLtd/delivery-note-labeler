@@ -78,6 +78,49 @@ public class PdfTextParserTests
     }
 
     [Fact]
+    public void ParseLineItems_SupportsSeparateRevisionColumn()
+    {
+        const string text = "1. PSM-002011 PROFILE ADV 150X150 31179176 A 1 ea PIPELINE FM FRAME";
+
+        var items = PdfTextParser.ParseLineItems(text);
+
+        Assert.Single(items);
+        Assert.Equal("PSM-002011", items[0].PartNo);
+        Assert.Equal("31179176 REV A", items[0].DrawingNo);
+        Assert.Equal("PROFILE ADV 150X150 PIPELINE FM FRAME", items[0].Description);
+        Assert.Equal(1, items[0].Quantity);
+    }
+
+    [Fact]
+    public void TryParseLineItemLine_ParsesNormalizedShiftedFontLine()
+    {
+        const string line = "1. PSM-001146 COVER REJECT L/F 30768957 REV F 50 ea";
+
+        Assert.True(PdfTextParser.TryParseLineItemLine(line, out var item));
+        Assert.Equal("PSM-001146", item.PartNo);
+        Assert.Equal("30768957 REV F", item.DrawingNo);
+        Assert.Equal("COVER REJECT L/F", item.Description);
+        Assert.Equal(50, item.Quantity);
+    }
+
+    [Theory]
+    [InlineData(@"c:\Users\brook\Desktop\Del Note file\deliverynote004246.pdf", "004246", 1)]
+    [InlineData(@"c:\Users\brook\Desktop\Del Note file\deliverynote004247.pdf", "004247", 1)]
+    [InlineData(@"c:\Users\brook\Desktop\Del Note file\deliverynote004248.pdf", "004248", 1)]
+    public void ExtractDeliveryNote_PharmaShiftedFontPdfs(string pdfPath, string deliveryNoteNo, int lineCount)
+    {
+        if (!File.Exists(pdfPath))
+        {
+            return;
+        }
+
+        var note = PdfExtractor.ExtractDeliveryNote(pdfPath);
+
+        Assert.Equal(deliveryNoteNo, note.DeliveryNoteNo);
+        Assert.Equal(lineCount, note.LineItems.Count);
+    }
+
+    [Fact]
     public void DocumentContainsExtractableText_IsFalseForImageOnlyPdf()
     {
         const string imageOnlyPdf =
