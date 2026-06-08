@@ -33,6 +33,13 @@ Get-ChildItem -Path $SourceDir -Force |
 
 Remove-InstallBloat -InstallDir $InstallDir
 
+$logoSource = Join-Path $ProjectRoot "assets\logo.png"
+if (Test-Path $logoSource) {
+    $logoDestDir = Join-Path $InstallDir "assets"
+    New-Item -ItemType Directory -Path $logoDestDir -Force | Out-Null
+    Copy-Item $logoSource (Join-Path $logoDestDir "logo.png") -Force
+}
+
 if (-not (Test-Path $ExePath)) {
     throw "Installation failed: $ExePath was not created."
 }

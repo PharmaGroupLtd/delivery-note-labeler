@@ -16,6 +16,8 @@ public static class LabelLayoutMetrics
     public const int LogoMaxWidthDots = 235;
     public const int LogoMaxHeightDots = 78;
     public const int MaxLogoGraphicBytes = 18000;
+    /// <summary>Slightly below full header bounds so the logo does not crowd the content block.</summary>
+    public const double LogoDisplayScale = 0.88;
 
     public static int GetAnchoredFooterY(LabelLayoutOptions layout, int footerHeightDots) =>
         layout.HeightDots - footerHeightDots - EdgeMarginDots;
@@ -32,8 +34,10 @@ public static class LabelLayoutMetrics
         int contentTopDots)
     {
         var originY = ScaleY(layout, LogoOriginYDots);
-        var maxWidth = layout.WidthDots - (EdgeMarginDots * 2);
-        var maxHeight = Math.Max(1, contentTopDots - originY - SectionPaddingDots);
+        var maxWidth = (int)Math.Round((layout.WidthDots - (EdgeMarginDots * 2)) * LogoDisplayScale);
+        var maxHeight = Math.Max(
+            1,
+            (int)Math.Round((contentTopDots - originY - SectionPaddingDots) * LogoDisplayScale));
         return (maxWidth, maxHeight);
     }
 

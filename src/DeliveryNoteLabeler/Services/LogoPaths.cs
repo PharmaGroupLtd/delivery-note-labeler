@@ -18,6 +18,6 @@ public static class LogoPaths
         }
 
         var legacy = Path.Combine(assetsDir, LegacyLogoFileName);
-        return File.Exists(legacy) ? legacy : primary;
+        return legacy;
     }
 }
