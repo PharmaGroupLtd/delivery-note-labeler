@@ -5,6 +5,20 @@ namespace DeliveryNoteLabeler.Core.Tests;
 public class PdfTextParserTests
 {
     [Fact]
+    public void ParseHeader_AllowsCustomerOrderWithPeriod()
+    {
+        const string text = """
+            Delivery Note No. 004223 rev 1
+            Customer Order No. 4507425575
+            Date: 28/05/2026
+            """;
+
+        var header = PdfTextParser.ParseHeader(text);
+
+        Assert.Equal("4507425575", header.CustomerOrderNo);
+    }
+
+    [Fact]
     public void ParseHeader_AllowsCustomerOrderOnNextLine()
     {
         const string text = """

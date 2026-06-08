@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="DeliveryNoteLabeler.Core.Tests" />
+    <InternalsVisibleTo Include="DiagExtract" />
   </ItemGroup>
 
   <ItemGroup>

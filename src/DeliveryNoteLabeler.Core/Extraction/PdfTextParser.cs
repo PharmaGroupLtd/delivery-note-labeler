@@ -19,16 +19,16 @@ public static partial class PdfTextParser
         RegexOptions.IgnoreCase)]
     private static partial Regex LineItemSearchPattern();
 
-    [GeneratedRegex(@"Delivery Note No\.?\s*([^\n\r]+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"Delivery Note (?:No|Number)[.:]?\s*([^\n\r]+)", RegexOptions.IgnoreCase)]
     private static partial Regex DeliveryNoteNoPattern();
 
-    [GeneratedRegex(@"Customer Order No:?\s*(\S+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"Customer Order No[.:]?\s*(\S+)", RegexOptions.IgnoreCase)]
     private static partial Regex CustomerOrderPattern();
 
     [GeneratedRegex(@"(\S+)\s+Customer Order No", RegexOptions.IgnoreCase)]
     private static partial Regex CustomerOrderReversedPattern();
 
-    [GeneratedRegex(@"Customer Order No:?\s*[\r\n]+\s*(\S+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"Customer Order No[.:]?\s*[\r\n]+\s*(\S+)", RegexOptions.IgnoreCase)]
     private static partial Regex CustomerOrderMultilinePattern();
 
     [GeneratedRegex(@"Sales Order No:?\s*(\S+)", RegexOptions.IgnoreCase)]
@@ -53,7 +53,7 @@ public static partial class PdfTextParser
             return string.Empty;
         }
 
-        var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n');
+        var normalized = text.Replace('\u00A0', ' ').Replace("\r\n", "\n").Replace('\r', '\n');
         normalized = LabelValueLineBreakPattern().Replace(normalized, "${label} ${value}");
         normalized = Regex.Replace(normalized, "[ \t]+", " ");
         return normalized.Trim();
