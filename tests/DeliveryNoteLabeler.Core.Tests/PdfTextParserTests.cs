@@ -5,6 +5,23 @@ namespace DeliveryNoteLabeler.Core.Tests;
 public class PdfTextParserTests
 {
     [Fact]
+    public void ParseLineItems_SupportsHyphenatedDrawingNumbers()
+    {
+        const string text = """
+            1. PSM-002050 ADJUSTABEL HEIGHT TROLLEY - 10-LCP-035393 1
+            SURFACE PLATE
+            """;
+
+        var items = PdfTextParser.ParseLineItems(text);
+
+        Assert.Single(items);
+        Assert.Equal("PSM-002050", items[0].PartNo);
+        Assert.Equal("10-LCP-035393", items[0].DrawingNo);
+        Assert.Equal("ADJUSTABEL HEIGHT TROLLEY - SURFACE PLATE", items[0].Description);
+        Assert.Equal(1, items[0].Quantity);
+    }
+
+    [Fact]
     public void ParseHeader_AllowsCustomerOrderWithPeriod()
     {
         const string text = """

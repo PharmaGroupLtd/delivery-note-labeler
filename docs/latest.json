@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.7",
+    "version":  "1.0.8",
     "releaseDate":  "2026-06-08",
-    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.7/DeliveryNoteLabeler-1.0.7-Setup.exe",
-    "releaseNotes":  "Fix normal PDF scan failing on valid delivery notes. Uses multiple text extraction strategies, better header parsing, and clearer scan errors."
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.8/DeliveryNoteLabeler-1.0.8-Setup.exe",
+    "releaseNotes":  "Fix normal scan for hyphenated drawing numbers (e.g. 10-LCP-035393) and wrapped descriptions after quantity."
 }

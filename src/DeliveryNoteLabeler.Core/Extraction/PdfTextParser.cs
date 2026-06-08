@@ -9,15 +9,20 @@ public static partial class PdfTextParser
     public const string StatusScanningNormal = "Scanning with normal mode…";
     public const string StatusScanningAi = "No readable text found — scanning with AI…";
 
-    [GeneratedRegex(
-        @"^(\d+)\.\s+(PSM-\d+)\s+(.+?)\s+(\d{5,9}\s+REV\s+[A-Z0-9]+)\s+(\d+)\s*(?:ea|each)?\s*$",
-        RegexOptions.Multiline | RegexOptions.IgnoreCase)]
-    private static partial Regex LineItemPattern();
+    private const string DrawingNoPattern =
+        @"(?:\d{5,9}\s+REV\s+[A-Z0-9]+|\d{2,}(?:-[A-Z0-9]+){2,})";
 
-    [GeneratedRegex(
-        @"(\d+)\.\s+(PSM-\d+)\s+(.+?)\s+(\d{5,9}\s+REV\s+[A-Z0-9]+)\s+(\d+)\s*(?:ea|each)?",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex LineItemSearchPattern();
+    private static readonly Regex LineItemTailRegex = new(
+        @"^(\d+)\.\s+(PSM-\d+)\s+(.+)\s+(\d+)\s*(?:ea|each)?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex DrawingNoAtEndRegex = new(
+        DrawingNoPattern + @"$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex WrappedQuantityBeforeDescriptionRegex = new(
+        @"^(\d+\.\s+PSM-\d+\s+)(.+?)(\s+" + DrawingNoPattern + @")(\s+\d+\s*(?:ea|each)?)(?:\s+(.+))?$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     [GeneratedRegex(@"Delivery Note (?:No|Number)[.:]?\s*([^\n\r]+)", RegexOptions.IgnoreCase)]
     private static partial Regex DeliveryNoteNoPattern();
@@ -59,11 +64,6 @@ public static partial class PdfTextParser
         return normalized.Trim();
     }
 
-    [GeneratedRegex(
-        @"^\d+\.\s+PSM-\d+\s+.+\s+\d{5,9}\s+REV\s+[A-Z0-9]+\s+\d+\s*(?:ea|each)?\s*$",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex CompleteLineItemPattern();
-
     public static string MergeWrappedLineItems(string text)
     {
         var normalized = NormalizeExtractedText(text);
@@ -87,7 +87,7 @@ public static partial class PdfTextParser
             {
                 if (!string.IsNullOrEmpty(current))
                 {
-                    mergedLines.Add(current.Trim());
+                    mergedLines.Add(NormalizeWrappedDescriptionOrder(current.Trim()));
                 }
 
                 current = line;
@@ -99,22 +99,39 @@ public static partial class PdfTextParser
                 continue;
             }
 
-            if (!IsCompleteLineItem(current) && IsLineItemContinuation(line))
+            if (IsLineItemContinuation(line))
             {
                 current += " " + line;
                 continue;
             }
 
-            mergedLines.Add(current.Trim());
+            mergedLines.Add(NormalizeWrappedDescriptionOrder(current.Trim()));
             current = string.Empty;
         }
 
         if (!string.IsNullOrEmpty(current))
         {
-            mergedLines.Add(current.Trim());
+            mergedLines.Add(NormalizeWrappedDescriptionOrder(current.Trim()));
         }
 
         return string.Join('\n', mergedLines);
+    }
+
+    internal static string NormalizeWrappedDescriptionOrder(string line)
+    {
+        var match = WrappedQuantityBeforeDescriptionRegex.Match(line.Trim());
+        if (!match.Success || !match.Groups[5].Success)
+        {
+            return line.Trim();
+        }
+
+        var trailingDescription = match.Groups[5].Value.Trim();
+        if (string.IsNullOrEmpty(trailingDescription))
+        {
+            return line.Trim();
+        }
+
+        return $"{match.Groups[1].Value}{match.Groups[2].Value.Trim()} {trailingDescription}{match.Groups[3].Value}{match.Groups[4].Value}".Trim();
     }
 
     public static List<LineItem> ParseLineItems(string text)
@@ -132,22 +149,63 @@ public static partial class PdfTextParser
     private static List<LineItem> ParseLineItemsFromMergedText(string text)
     {
         var items = new List<LineItem>();
-        foreach (Match match in LineItemPattern().Matches(text))
+        foreach (var rawLine in text.Split('\n'))
         {
-            TryAddLineItem(match, items);
-        }
-
-        if (items.Count > 0)
-        {
-            return items;
-        }
-
-        foreach (Match match in LineItemSearchPattern().Matches(text))
-        {
-            TryAddLineItem(match, items);
+            if (TryParseLineItemLine(rawLine, out var item))
+            {
+                items.Add(item);
+            }
         }
 
         return items;
+    }
+
+    internal static bool TryParseLineItemLine(string rawLine, out LineItem item)
+    {
+        item = null!;
+        var line = rawLine.Trim();
+        if (string.IsNullOrEmpty(line))
+        {
+            return false;
+        }
+
+        var match = LineItemTailRegex.Match(line);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(match.Groups[1].Value, out var lineNo)
+            || !int.TryParse(match.Groups[4].Value, out var quantity))
+        {
+            return false;
+        }
+
+        var partNo = match.Groups[2].Value.ToUpperInvariant();
+        var body = match.Groups[3].Value.Trim();
+        var drawingMatch = DrawingNoAtEndRegex.Match(body);
+        if (!drawingMatch.Success)
+        {
+            return false;
+        }
+
+        var drawingNo = drawingMatch.Value.Trim().ToUpperInvariant();
+        var description = body[..drawingMatch.Index].Trim().TrimEnd('-').Trim();
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return false;
+        }
+
+        item = new LineItem
+        {
+            LineNo = lineNo,
+            PartNo = partNo,
+            Description = description,
+            DrawingNo = drawingNo,
+            Quantity = quantity,
+        };
+
+        return true;
     }
 
     public static HeaderFields ParseHeader(string pageText)
@@ -221,24 +279,7 @@ public static partial class PdfTextParser
         || Regex.IsMatch(line, @"^\d+\s*(?:ea|each)\b", RegexOptions.IgnoreCase)
         || (line.Length <= 48 && !line.Contains(':') && !line.StartsWith("--", StringComparison.Ordinal));
 
-    private static bool IsCompleteLineItem(string line) => CompleteLineItemPattern().IsMatch(line.Trim());
-
-    private static void TryAddLineItem(Match match, ICollection<LineItem> items)
-    {
-        if (!match.Success)
-        {
-            return;
-        }
-
-        items.Add(new LineItem
-        {
-            LineNo = int.Parse(match.Groups[1].Value),
-            PartNo = match.Groups[2].Value.ToUpperInvariant(),
-            Description = match.Groups[3].Value.Trim(),
-            DrawingNo = match.Groups[4].Value.ToUpperInvariant(),
-            Quantity = int.Parse(match.Groups[5].Value),
-        });
-    }
+    private static bool IsCompleteLineItem(string line) => TryParseLineItemLine(line, out _);
 
     public sealed class HeaderFields
     {
