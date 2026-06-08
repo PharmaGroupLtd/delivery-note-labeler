@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.10",
+    "version":  "1.0.11",
     "releaseDate":  "2026-06-08",
-    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.10/DeliveryNoteLabeler-1.0.10-Setup.exe",
-    "releaseNotes":  "Label layout update: part number now appears above the description on the right side of the label. Left column shows delivery number, order number, and quantity."
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.11/DeliveryNoteLabeler-1.0.11-Setup.exe",
+    "releaseNotes":  "Label layout: bordered fields anchored above the footer with MADE IN UK at the bottom. Logo enlarged to use the full header area."
 }
