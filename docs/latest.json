@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.4",
+    "version":  "1.0.5",
     "releaseDate":  "2026-06-08",
-    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.4/DeliveryNoteLabeler-1.0.4-Setup.exe",
-    "releaseNotes":  "Fix Print Labels context menu (PowerShell launcher, self-contained install, logging). Label Qty vs Part Qty, add/delete lines, PDF extraction improvements, in-app updates."
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.5/DeliveryNoteLabeler-1.0.5-Setup.exe",
+    "releaseNotes":  "Fix Setup.exe failing on managed PCs. Native C# installer (no PowerShell from temp), clearer errors, install log, zip fallback instructions."
 }

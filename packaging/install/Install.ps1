@@ -23,6 +23,8 @@ Write-Host "  From: $PackageRoot"
 Write-Host "  To:   $InstallDir"
 
 if (Test-Path $InstallDir) {
+    Get-Process DeliveryNoteLabeler -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 1
     Remove-Item -Path $InstallDir -Recurse -Force
 }
 

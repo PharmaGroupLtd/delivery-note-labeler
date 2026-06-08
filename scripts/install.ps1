@@ -22,6 +22,8 @@ if (-not (Test-Path (Join-Path $SourceDir "DeliveryNoteLabeler.exe"))) {
 Write-Host "Installing to: $InstallDir"
 
 if (Test-Path $InstallDir) {
+    Get-Process DeliveryNoteLabeler -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 1
     Remove-Item -Path $InstallDir -Recurse -Force
 }
 

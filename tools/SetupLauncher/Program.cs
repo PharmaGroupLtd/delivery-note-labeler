@@ -1,16 +1,31 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 ApplicationConfiguration.Initialize();
 
+var logPath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "Delivery Note Labeler",
+    "install.log");
+
 var extractDir = Path.Combine(
-    Path.GetTempPath(),
-    "DeliveryNoteLabeler-Setup-" + Guid.NewGuid().ToString("N"));
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "Delivery Note Labeler",
+    "SetupExtract");
 
 try
 {
+    Log(logPath, "Starting Delivery Note Labeler setup.");
+
+    if (Directory.Exists(extractDir))
+    {
+        TryDeleteDirectory(extractDir);
+    }
+
     Directory.CreateDirectory(extractDir);
 
     var zipPath = Path.Combine(extractDir, "DeliveryNoteLabeler-package.zip");
@@ -18,18 +33,9 @@ try
     ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
 
     var packageRoot = ResolvePackageRoot(extractDir);
-    var installScript = Path.Combine(packageRoot, "Install.ps1");
-    if (!File.Exists(installScript))
-    {
-        throw new FileNotFoundException("Install.ps1 was not found inside the package.", installScript);
-    }
+    Log(logPath, $"Package root: {packageRoot}");
 
-    var exitCode = RunPowerShell(installScript);
-    if (exitCode != 0)
-    {
-        ShowError("Installation failed. Contact IT support if this keeps happening.");
-        return 1;
-    }
+    InstallFromPackage(packageRoot, logPath);
 
     var installedExe = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -39,9 +45,12 @@ try
 
     if (!File.Exists(installedExe))
     {
-        ShowError($"Installation did not create the app at:{Environment.NewLine}{installedExe}");
-        return 1;
+        throw new FileNotFoundException(
+            "Installation did not create the app executable.",
+            installedExe);
     }
+
+    Log(logPath, "Installation completed successfully.");
 
     var launch = MessageBox.Show(
         "Delivery Note Labeler was installed successfully.\n\nOpen the app now?",
@@ -63,21 +72,207 @@ try
 }
 catch (Exception ex)
 {
-    ShowError(ex.Message);
+    Log(logPath, $"Installation failed: {ex}");
+    ShowError(
+        "Installation failed.\n\n"
+        + ex.Message
+        + "\n\nDetails were saved to:\n"
+        + logPath
+        + "\n\nIf this PC is managed by your company, try the zip install instead:\n"
+        + "1. Download DeliveryNoteLabeler-*-win-x64.zip\n"
+        + "2. Extract it\n"
+        + "3. Double-click Install.cmd");
     return 1;
 }
 finally
 {
+    TryDeleteDirectory(extractDir);
+}
+
+static void InstallFromPackage(string packageRoot, string logPath)
+{
+    var installDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Programs",
+        "Delivery Note Labeler");
+
+    var sourceExe = Path.Combine(packageRoot, "DeliveryNoteLabeler.exe");
+    if (!File.Exists(sourceExe))
+    {
+        throw new FileNotFoundException(
+            "DeliveryNoteLabeler.exe was not found in the installer package.",
+            sourceExe);
+    }
+
+    Log(logPath, $"Installing from {packageRoot} to {installDir}");
+
+    StopRunningApp(logPath);
+
+    if (Directory.Exists(installDir))
+    {
+        Log(logPath, "Removing previous install folder.");
+        TryDeleteDirectory(installDir);
+    }
+
+    Directory.CreateDirectory(installDir);
+
+    var skipNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Install.ps1",
+        "Install.cmd",
+        "Uninstall.ps1",
+        "README.txt",
+        "DeliveryNoteLabeler-package.zip",
+    };
+
+    foreach (var entry in Directory.EnumerateFileSystemEntries(packageRoot))
+    {
+        var name = Path.GetFileName(entry);
+        if (skipNames.Contains(name))
+        {
+            continue;
+        }
+
+        var destination = Path.Combine(installDir, name);
+        if (Directory.Exists(entry))
+        {
+            CopyDirectory(entry, destination);
+        }
+        else
+        {
+            File.Copy(entry, destination, overwrite: true);
+        }
+    }
+
+    var installedExe = Path.Combine(installDir, "DeliveryNoteLabeler.exe");
+    var launchCmdPath = Path.Combine(installDir, "PrintLabels.cmd");
+    var launchPs1Path = Path.Combine(installDir, "PrintLabels.ps1");
+
+    if (!File.Exists(installedExe))
+    {
+        throw new FileNotFoundException("Installation failed: app executable was not copied.", installedExe);
+    }
+
+    if (!File.Exists(launchCmdPath) || !File.Exists(launchPs1Path))
+    {
+        throw new FileNotFoundException("Installation failed: Print Labels launcher files were not copied.");
+    }
+
+    RegisterPrintLabelsContextMenu(launchCmdPath, Path.Combine(installDir, "DeliveryNoteLabeler.ico"), installedExe, logPath);
+}
+
+static void RegisterPrintLabelsContextMenu(string launchCmdPath, string iconPath, string exePath, string logPath)
+{
+    var iconValue = File.Exists(iconPath) ? iconPath : $"{exePath},0";
+    var command = $"\"{launchCmdPath}\" %*";
+
+    var registryPaths = new[]
+    {
+        @"Software\Classes\SystemFileAssociations\.pdf\shell\PrintLabels",
+        @"Software\Classes\.pdf\shell\PrintLabels",
+    };
+
+    foreach (var registryPath in registryPaths)
+    {
+        using var shellKey = Registry.CurrentUser.CreateSubKey(registryPath, writable: true)
+            ?? throw new InvalidOperationException($"Could not create registry key: HKCU\\{registryPath}");
+
+        shellKey.SetValue(null, "Print Labels");
+        shellKey.SetValue("Icon", iconValue);
+        shellKey.SetValue("MultiSelectModel", "Document");
+
+        using var commandKey = shellKey.CreateSubKey("command", writable: true)
+            ?? throw new InvalidOperationException($"Could not create registry key: HKCU\\{registryPath}\\command");
+
+        commandKey.SetValue(null, command);
+    }
+
+    Log(logPath, "Registered Print Labels context menu.");
+}
+
+static void StopRunningApp(string logPath)
+{
+    foreach (var process in Process.GetProcessesByName("DeliveryNoteLabeler"))
+    {
+        try
+        {
+            Log(logPath, $"Stopping running app process {process.Id}.");
+            process.CloseMainWindow();
+            if (!process.WaitForExit(5000))
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(logPath, $"Could not stop process {process.Id}: {ex.Message}");
+        }
+        finally
+        {
+            process.Dispose();
+        }
+    }
+}
+
+static void CopyDirectory(string sourceDir, string destinationDir)
+{
+    Directory.CreateDirectory(destinationDir);
+
+    foreach (var entry in Directory.EnumerateFileSystemEntries(sourceDir))
+    {
+        var name = Path.GetFileName(entry);
+        var destination = Path.Combine(destinationDir, name);
+        if (Directory.Exists(entry))
+        {
+            CopyDirectory(entry, destination);
+        }
+        else
+        {
+            File.Copy(entry, destination, overwrite: true);
+        }
+    }
+}
+
+static void TryDeleteDirectory(string path)
+{
+    if (!Directory.Exists(path))
+    {
+        return;
+    }
+
+    foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+    {
+        try
+        {
+            File.SetAttributes(file, FileAttributes.Normal);
+        }
+        catch
+        {
+            // Best effort.
+        }
+    }
+
+    Directory.Delete(path, recursive: true);
+}
+
+static void Log(string logPath, string message)
+{
     try
     {
-        if (Directory.Exists(extractDir))
+        var logDir = Path.GetDirectoryName(logPath);
+        if (!string.IsNullOrEmpty(logDir))
         {
-            Directory.Delete(extractDir, recursive: true);
+            Directory.CreateDirectory(logDir);
         }
+
+        File.AppendAllText(
+            logPath,
+            $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}",
+            Encoding.UTF8);
     }
     catch
     {
-        // Best-effort cleanup only.
+        // Ignore logging failures.
     }
 }
 
@@ -102,10 +297,16 @@ static string ResolvePackageRoot(string extractDir)
     if (nestedDirectories.Length == 1)
     {
         var nestedRoot = nestedDirectories[0];
-        if (File.Exists(Path.Combine(nestedRoot, "Install.ps1")))
+        if (File.Exists(Path.Combine(nestedRoot, "Install.ps1"))
+            || File.Exists(Path.Combine(nestedRoot, "DeliveryNoteLabeler.exe")))
         {
             return nestedRoot;
         }
+    }
+
+    if (File.Exists(Path.Combine(extractDir, "DeliveryNoteLabeler.exe")))
+    {
+        return extractDir;
     }
 
     throw new InvalidOperationException(
@@ -127,36 +328,4 @@ static async Task ExtractEmbeddedPackageAsync(string destinationPath)
 
     await using var destination = File.Create(destinationPath);
     await resourceStream.CopyToAsync(destination).ConfigureAwait(false);
-}
-
-static int RunPowerShell(string scriptPath)
-{
-    var powershell = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-        "System32",
-        "WindowsPowerShell",
-        "v1.0",
-        "powershell.exe");
-
-    if (!File.Exists(powershell))
-    {
-        powershell = "powershell.exe";
-    }
-
-    var startInfo = new ProcessStartInfo
-    {
-        FileName = powershell,
-        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\"",
-        UseShellExecute = false,
-        CreateNoWindow = true,
-    };
-
-    using var process = Process.Start(startInfo);
-    if (process is null)
-    {
-        throw new InvalidOperationException("Could not start PowerShell.");
-    }
-
-    process.WaitForExit();
-    return process.ExitCode;
 }
