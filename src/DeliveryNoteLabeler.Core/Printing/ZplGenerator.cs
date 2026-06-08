@@ -160,8 +160,8 @@ public static class ZplGenerator
             QuantityMaxValueLines);
         var footerHeight = GetFooterSectionHeight();
 
-        var partNumber = new SectionRect(leftX, contentTop, leftWidth, standardHeight);
-        var deliveryNumber = new SectionRect(leftX, partNumber.Y + partNumber.Height, leftWidth, standardHeight);
+        var partNumber = new SectionRect(rightX, contentTop, rightWidth, standardHeight);
+        var deliveryNumber = new SectionRect(leftX, contentTop, leftWidth, standardHeight);
         var orderNumber = new SectionRect(
             leftX,
             deliveryNumber.Y + deliveryNumber.Height,
@@ -180,7 +180,11 @@ public static class ZplGenerator
             footerY,
             layout.WidthDots - (LabelLayoutMetrics.EdgeMarginDots * 2),
             footerHeight);
-        var description = new SectionRect(rightX, contentTop, rightWidth, contentBottom - contentTop);
+        var description = new SectionRect(
+            rightX,
+            partNumber.Y + partNumber.Height,
+            rightWidth,
+            contentBottom - (partNumber.Y + partNumber.Height));
 
         var descriptionMaxLines = GetDescriptionMaxLines(description, padding);
 
@@ -246,12 +250,6 @@ public static class ZplGenerator
         AppendHorizontalRule(
             builder,
             innerLeft,
-            sections.PartNumber.Y + sections.PartNumber.Height - thickness,
-            leftRuleWidth,
-            thickness);
-        AppendHorizontalRule(
-            builder,
-            innerLeft,
             sections.DeliveryNumber.Y + sections.DeliveryNumber.Height - thickness,
             leftRuleWidth,
             thickness);
@@ -260,6 +258,12 @@ public static class ZplGenerator
             innerLeft,
             sections.OrderNumber.Y + sections.OrderNumber.Height - thickness,
             leftRuleWidth,
+            thickness);
+        AppendHorizontalRule(
+            builder,
+            sections.DividerX,
+            sections.PartNumber.Y + sections.PartNumber.Height - thickness,
+            innerLeft + innerWidth - sections.DividerX,
             thickness);
 
         AppendVerticalRule(

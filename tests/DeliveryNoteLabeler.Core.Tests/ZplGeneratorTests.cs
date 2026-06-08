@@ -110,6 +110,51 @@ public class ZplGeneratorTests
     }
 
     [Fact]
+    public void BuildLabelZpl_PlacesPartNumberAboveDescriptionOnRightColumn()
+    {
+        var job = new LabelJob
+        {
+            DeliveryNoteNo = "004223 rev 1",
+            CustomerOrderNo = "4507425575",
+            DrawingNo = "30745655 REV A",
+            PartQuantity = 2,
+            LabelQuantity = 1,
+            Description = "BRACKET, T-SENSOR, KNOB, BIN FULL, SS",
+            LineNo = 1,
+        };
+
+        var zpl = ZplGenerator.BuildLabelZpl(job);
+        var partNumberY = GetFieldOriginY(zpl, "PART NUMBER:");
+        var deliveryNumberY = GetFieldOriginY(zpl, "DELIVERY NUMBER:");
+        var descriptionY = GetFieldOriginY(zpl, "DESCRIPTION:");
+        var partNumberX = GetFieldOriginX(zpl, "PART NUMBER:");
+        var deliveryNumberX = GetFieldOriginX(zpl, "DELIVERY NUMBER:");
+        var descriptionX = GetFieldOriginX(zpl, "DESCRIPTION:");
+
+        Assert.True(partNumberX >= 418, $"Part number should render in the right column (x={partNumberX}).");
+        Assert.True(deliveryNumberX < 418, $"Delivery number should render in the left column (x={deliveryNumberX}).");
+        Assert.True(partNumberY < descriptionY, "Description should appear below the part number.");
+        Assert.True(deliveryNumberY < partNumberY + 80, "Left column should start at the same row as part number.");
+        Assert.Contains($"^GB384,2,2,B,0^FS", zpl, StringComparison.Ordinal);
+    }
+
+    private static int GetFieldOriginY(string zpl, string fieldText)
+    {
+        var marker = $"^FD{fieldText}^FS";
+        var line = zpl.Split('\n').First(l => l.Contains(marker, StringComparison.Ordinal));
+        var origin = line.Split('^')[1]; // FO424,86
+        return int.Parse(origin.Split(',')[1]);
+    }
+
+    private static int GetFieldOriginX(string zpl, string fieldText)
+    {
+        var marker = $"^FD{fieldText}^FS";
+        var line = zpl.Split('\n').First(l => l.Contains(marker, StringComparison.Ordinal));
+        var origin = line.Split('^')[1]; // FO424,86
+        return int.Parse(origin[2..].Split(',')[0]);
+    }
+
+    [Fact]
     public void BuildLabelZpl_WithLogo_PlacesLogoOnLeft()
     {
         var logo = new ZplEmbeddedGraphic
