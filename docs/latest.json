@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.11",
+    "version":  "1.0.12",
     "releaseDate":  "2026-06-08",
-    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.11/DeliveryNoteLabeler-1.0.11-Setup.exe",
-    "releaseNotes":  "Label layout: bordered fields anchored above the footer with MADE IN UK at the bottom. Logo enlarged to use the full header area."
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.12/DeliveryNoteLabeler-1.0.12-Setup.exe",
+    "releaseNotes":  "New Pharma Sheet Metal Group logo on printed labels, sized slightly smaller in the header area."
 }
