@@ -41,6 +41,33 @@ public class PdfPathParserTests : IDisposable
     }
 
     [Fact]
+    public void ResolveStartupPdfPaths_UsesStartupArgsOnly()
+    {
+        var pdf = CreateTempPdf("startup-only");
+        var listPath = Path.Combine(Path.GetTempPath(), $"delivery-note-labeler-list-{Guid.NewGuid():N}.pdflist");
+        _tempFiles.Add(listPath);
+        File.WriteAllText(listPath, pdf);
+
+        var paths = PdfPathParser.ResolveStartupPdfPaths(
+            [$"--open-from", listPath, "C:\\ignored\\missing.pdf"]);
+
+        Assert.Single(paths);
+        Assert.Contains(pdf, paths, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseForwardedPdfPaths_AcceptsLegacyPrintLabelsCmdLine()
+    {
+        var pdf = CreateTempPdf("legacy");
+        var malformed = $"\"{pdf}\")";
+
+        var paths = PdfPathParser.ParseForwardedPdfPaths([malformed]);
+
+        Assert.Single(paths);
+        Assert.Contains(pdf, paths, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ReadOpenFromListFile_LoadsMultiplePdfPaths()
     {
         var one = CreateTempPdf("one");

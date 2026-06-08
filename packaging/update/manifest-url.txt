@@ -1,1 +1,1 @@
-REPLACE_WITH_YOUR_MANIFEST_URL
+﻿https://PharmaGroupLtd.github.io/delivery-note-labeler/latest.json

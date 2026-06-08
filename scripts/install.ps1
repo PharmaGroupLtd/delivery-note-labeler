@@ -7,7 +7,13 @@ $SourceDir = Join-Path $ProjectRoot "dist\publish"
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\Delivery Note Labeler"
 $ExePath = Join-Path $InstallDir "DeliveryNoteLabeler.exe"
 $LaunchCmdPath = Join-Path $InstallDir "PrintLabels.cmd"
+$LaunchPs1Path = Join-Path $InstallDir "PrintLabels.ps1"
 $InstallTemplateDir = Join-Path $ProjectRoot "packaging\install"
+
+if (-not (Test-Path (Join-Path $SourceDir "DeliveryNoteLabeler.exe"))) {
+    Write-Host "Built app not found. Building self-contained release output..."
+    & (Join-Path $ProjectRoot "scripts\build.ps1") -SelfContained
+}
 
 if (-not (Test-Path (Join-Path $SourceDir "DeliveryNoteLabeler.exe"))) {
     throw "Built app not found. Run scripts\build.ps1 first."
@@ -22,6 +28,7 @@ if (Test-Path $InstallDir) {
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 Copy-Item -Path (Join-Path $SourceDir "*") -Destination $InstallDir -Recurse -Force
 Copy-Item -Path (Join-Path $InstallTemplateDir "PrintLabels.cmd") $LaunchCmdPath -Force
+Copy-Item -Path (Join-Path $InstallTemplateDir "PrintLabels.ps1") $LaunchPs1Path -Force
 
 $iconPath = Join-Path $InstallDir "DeliveryNoteLabeler.ico"
 if (-not (Test-Path $iconPath)) {

@@ -34,17 +34,38 @@ public partial class App : Application
 
         if (!_singleInstance.IsPrimaryInstance)
         {
-            if (!_singleInstance.TryForwardToExistingInstance(initialPdfs) && initialPdfs.Count > 0)
+            var exitCode = 0;
+
+            if (initialPdfs.Count == 0)
             {
+                WritePrintLabelsLog("Secondary instance received no PDF paths.");
+                MessageBox.Show(
+                    "Delivery Note Labeler could not read the selected PDF file paths.\n\n"
+                    + "Try Print Labels again. If this keeps happening, reinstall the latest version of the app.\n\n"
+                    + $"Details: {GetPrintLabelsLogPath()}",
+                    "Delivery Note Labeler",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                exitCode = 1;
+            }
+            else if (!_singleInstance.TryForwardToExistingInstance(initialPdfs))
+            {
+                WritePrintLabelsLog(
+                    $"Secondary instance could not forward {initialPdfs.Count} PDF path(s) to the running app.");
                 MessageBox.Show(
                     "Delivery Note Labeler is still starting and could not receive the selected PDFs. Try Print Labels again.",
                     "Delivery Note Labeler",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+                exitCode = 1;
+            }
+            else
+            {
+                WritePrintLabelsLog($"Secondary instance forwarded {initialPdfs.Count} PDF path(s).");
             }
 
-            Shutdown();
-            return;
+            _singleInstance.Dispose();
+            Environment.Exit(exitCode);
         }
 
         var autoProcessQueue = initialPdfs.Count > 0;
@@ -129,6 +150,29 @@ public partial class App : Application
     private void OnExit(object sender, ExitEventArgs e)
     {
         _singleInstance?.Dispose();
+    }
+
+    private static string GetPrintLabelsLogPath() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Delivery Note Labeler",
+            "print-labels.log");
+
+    private static void WritePrintLabelsLog(string message)
+    {
+        var logPath = GetPrintLabelsLogPath();
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.AppendAllText(
+                logPath,
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Ignore logging failures.
+        }
     }
 
     private static void ShowFatalError(Exception ex)

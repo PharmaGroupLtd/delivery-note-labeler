@@ -2,6 +2,9 @@
 
 Desktop app for parsing fixed-layout Pharma Sheet Metal delivery note PDFs, previewing expanded label jobs, and exporting them to CSV.
 
+**Repository:** https://github.com/PharmaGroupLtd/delivery-note-labeler  
+**Download page:** https://pharmagroupltd.github.io/delivery-note-labeler/
+
 Built with **.NET 8 WPF** (native Windows UI). Phase 1 covers scanning, review queue, and CSV export. Phase 2 adds **Zebra GK420d printing** over a shared Windows printer queue.
 
 ## Requirements
@@ -97,13 +100,25 @@ You can host the installer online and let installed apps detect new versions aut
 
 **One-time setup (GitHub):**
 
-1. Push this repo to GitHub.
+1. ~~Push this repo to GitHub.~~ Done: [PharmaGroupLtd/delivery-note-labeler](https://github.com/PharmaGroupLtd/delivery-note-labeler)
 2. Install [GitHub CLI](https://cli.github.com/) and run `gh auth login`.
-3. Enable **GitHub Pages** for the repo (Settings → Pages → deploy from the `/docs` folder).
-4. Publish a release:
+3. Enable **GitHub Pages** for the repo (Settings → Pages → deploy from the **`/docs`** folder, branch **`main`**).
+4. Publish the first release:
 
 ```powershell
-.\scripts\publish-release.ps1 -Repo "your-org/delivery-note-labeler" -ReleaseNotes "Describe what changed."
+.\scripts\publish-release.ps1 -ReleaseNotes "Initial public release."
+```
+
+If GitHub CLI is not installed or not logged in yet, use manual mode instead (builds the installer and opens the GitHub release page):
+
+```powershell
+.\scripts\publish-release.ps1 -Manual -ReleaseNotes "Initial public release."
+```
+
+For automatic publish, install GitHub CLI once (`winget install GitHub.cli`), then log in:
+
+```powershell
+gh auth login
 ```
 
 That script:
@@ -113,7 +128,7 @@ That script:
 - Updates `docs/latest.json` for the download page and in-app update checks
 - Saves the update URL into `packaging/update/manifest-url.txt` (embedded in future builds)
 
-**Download page:** `https://your-org.github.io/delivery-note-labeler/`
+**Download page:** https://pharmagroupltd.github.io/delivery-note-labeler/
 
 **What users see:** when a newer version is published, the app shows an **Update available** popup on startup (or from **Settings → Check for updates**). **Download update** opens the online installer in the browser.
 
@@ -198,7 +213,11 @@ Removes the install folder and the Explorer context menu entry.
 
 Configure the GK420d in **Settings** before printing (see network printing section above).
 
-Each line item is expanded by quantity. For example, a line with `2 ea` produces two label rows.
+Each line item produces **one table row** by default.
+
+- **Part Qty** — how many parts the delivery note line contains (from the PDF, printed on the label as `2 PCS`).
+- **Label Qty** — how many physical labels to print for that row. Defaults to the same value as **Part Qty**, but you can lower it (for example `1` label for a bag containing `2` parts).
+- Use **Add line** / **Delete line** to adjust the label table manually.
 
 ### Scanned / photocopied PDFs
 
@@ -232,7 +251,7 @@ Expected results:
 - Delivery note: `004223 rev 1`
 - Customer order: `4507425575`
 - 5 line items
-- 7 label jobs after quantity expansion
+- 7 labels by default (label qty matches part qty; edit label qty to reduce, e.g. one label for a bag of two)
 
 ## Run tests
 
@@ -287,6 +306,7 @@ Still planned:
 | Delivery note no. | `Delivery Note No.` |
 | Order no. | `Customer Order No.` |
 | Part no. | Line `Drawing No.` |
-| Quantity | Expanded per physical unit |
+| Part qty | Line `Quantity` column from the PDF (shown on the label) |
+| Label qty | How many labels to print for that row |
 
 Multi-page delivery notes are supported: headers are read from page 1, line items are merged from all pages.

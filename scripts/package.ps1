@@ -28,6 +28,12 @@ $packageName = "DeliveryNoteLabeler-$Version-$Runtime"
 $packageDir = Join-Path $ProjectRoot "dist\$packageName"
 $zipPath = Join-Path $ProjectRoot "dist\$packageName.zip"
 $installTemplateDir = Join-Path $ProjectRoot "packaging\install"
+$githubRepoFile = Join-Path $ProjectRoot "packaging\update\github-repo.txt"
+$githubRepo = if (Test-Path $githubRepoFile) {
+    (Get-Content $githubRepoFile -Raw).Trim()
+} else {
+    "PharmaGroupLtd/delivery-note-labeler"
+}
 
 $releaseExcludeFiles = @(
     "DeliveryNoteLabeler.Sparse.msix",
@@ -47,6 +53,7 @@ $installFiles = @(
     "Install.cmd",
     "Uninstall.ps1",
     "PrintLabels.cmd",
+    "PrintLabels.ps1",
     "README.txt"
 )
 
@@ -128,7 +135,7 @@ $latestManifestPath = Join-Path $ProjectRoot "packaging\update\latest.json"
 $latestManifest = @{
     version      = $Version
     releaseDate  = (Get-Date).ToString("yyyy-MM-dd")
-    downloadUrl  = "https://github.com/REPLACE_OWNER/REPLACE_REPO/releases/download/v$Version/DeliveryNoteLabeler-$Version-Setup.exe"
+    downloadUrl  = "https://github.com/$githubRepo/releases/download/v$Version/DeliveryNoteLabeler-$Version-Setup.exe"
     releaseNotes = "Delivery Note Labeler $Version"
 }
 ($latestManifest | ConvertTo-Json -Depth 3) + [Environment]::NewLine |

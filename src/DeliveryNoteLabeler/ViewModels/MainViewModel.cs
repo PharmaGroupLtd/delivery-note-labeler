@@ -44,10 +44,25 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _linesStat = "—";
     private string _labelsStat = "—";
     private string _detailPlaceholder = StatusReady;
+    private LabelJobRow? _selectedLabelRow;
 
     public ObservableCollection<QueueItemViewModel> QueueItems { get; } = [];
 
     public ObservableCollection<LabelJobRow> LabelRows { get; } = [];
+
+    public LabelJobRow? SelectedLabelRow
+    {
+        get => _selectedLabelRow;
+        set
+        {
+            if (!SetField(ref _selectedLabelRow, value))
+            {
+                return;
+            }
+
+            DeleteLabelLineCommand.RaiseCanExecuteChanged();
+        }
+    }
 
     public QueueItemViewModel? SelectedQueueItem
     {
@@ -169,6 +184,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public RelayCommand SettingsCommand { get; }
     public RelayCommand PrintCommand { get; }
     public RelayCommand PrintAllCommand { get; }
+    public RelayCommand AddLabelLineCommand { get; }
+    public RelayCommand DeleteLabelLineCommand { get; }
 
     public MainViewModel()
     {
@@ -177,7 +194,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
         SettingsCommand = new RelayCommand(OpenSettingsFromCommand);
         PrintCommand = new RelayCommand(PrintSelected, () => CanPrint);
         PrintAllCommand = new RelayCommand(PrintAllReady, () => CanPrintAll);
+        AddLabelLineCommand = new RelayCommand(AddLabelLine, () => CanEditLabelRows);
+        DeleteLabelLineCommand = new RelayCommand(DeleteSelectedLabelLine, () => CanDeleteLabelLine);
     }
+
+    private bool CanEditLabelRows =>
+        SelectedQueueItem?.Status == QueueItemStatus.Ready && SelectedQueueItem.Note is not null;
+
+    private bool CanDeleteLabelLine =>
+        CanEditLabelRows && SelectedLabelRow is not null;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -259,13 +284,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public void ExportCsv()
     {
-        if (SelectedQueueItem?.Note is null || SelectedQueueItem.Jobs.Count == 0)
+        if (SelectedQueueItem?.Note is null || LabelRows.Count == 0)
         {
             return;
         }
 
         var note = SelectedQueueItem.Note;
-        var jobs = SelectedQueueItem.Jobs;
+        var jobs = GetCurrentLabelJobs();
         var defaultName = "label_jobs.csv";
         if (!string.IsNullOrEmpty(note.SourcePath))
         {
@@ -289,9 +314,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             var outputPath = CsvExporter.ExportLabelJobsToCsv(jobs, dialog.FileName);
-            SetStatus($"Exported {jobs.Count} labels to {Path.GetFileName(outputPath)}", success: true);
+            var labelCount = LabelJob.CountLabelsToPrint(jobs);
+            SetStatus($"Exported {jobs.Count} rows ({labelCount} labels) to {Path.GetFileName(outputPath)}", success: true);
             MessageBox.Show(
-                $"Saved {jobs.Count} label rows to:\n{outputPath}",
+                $"Saved {jobs.Count} rows ({labelCount} labels) to:\n{outputPath}",
                 "Export complete",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -339,7 +365,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (SelectedQueueItem?.Status == QueueItemStatus.Ready)
         {
             SetStatus(
-                $"Reviewing {SelectedQueueItem.DisplayTitle}: {SelectedQueueItem.Jobs.Count} labels ready to print.",
+                $"Reviewing {SelectedQueueItem.DisplayTitle}: {LabelJob.CountLabelsToPrint(SelectedQueueItem.Jobs)} labels ready to print.",
                 success: true);
             return;
         }
@@ -701,24 +727,26 @@ public sealed class MainViewModel : INotifyPropertyChanged
             case QueueItemStatus.Ready when item.Note is not null:
                 var note = item.Note;
                 var method = ExtractionMethodLabel(note);
+                var labelsToPrint = LabelJob.CountLabelsToPrint(item.Jobs);
                 FileLabel = $"{note.DeliveryNoteNo} · Order {note.CustomerOrderNo} · {method}";
-                UpdateStats(note, item.Jobs.Count);
+                SelectedLabelRow = null;
                 PopulateTable(item.Jobs);
-                FooterLabel = $"{item.Jobs.Count} labels from {note.LineItems.Count} line items";
+                RefreshLabelSummary();
                 DetailPlaceholder = string.Empty;
                 SetStatus(
-                    $"Review {note.DeliveryNoteNo}: {item.Jobs.Count} labels ready to print.",
+                    $"Review {note.DeliveryNoteNo}: {labelsToPrint} labels ready to print.",
                     success: true);
                 break;
         }
 
-        CanExport = item.Status == QueueItemStatus.Ready && item.Jobs.Count > 0;
+        CanExport = item.Status == QueueItemStatus.Ready && LabelRows.Count > 0;
         UpdateCommandStates();
         OnPropertyChanged(nameof(ShowDetailPlaceholder));
     }
 
     private void ClearDetailData()
     {
+        SelectedLabelRow = null;
         UpdateStats(null);
         LabelRows.Clear();
         CanExport = false;
@@ -752,7 +780,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
         CanPrintAll = printerConfigured
             && QueueItems.Any(item => item.CanPrint)
             && !_printInProgress;
-        CanExport = SelectedQueueItem?.Status == QueueItemStatus.Ready && SelectedQueueItem.Jobs.Count > 0;
+        CanExport = SelectedQueueItem?.Status == QueueItemStatus.Ready && LabelRows.Count > 0;
+
+        BrowseCommand.RaiseCanExecuteChanged();
+        ExportCommand.RaiseCanExecuteChanged();
+        PrintCommand.RaiseCanExecuteChanged();
+        PrintAllCommand.RaiseCanExecuteChanged();
+        AddLabelLineCommand.RaiseCanExecuteChanged();
+        DeleteLabelLineCommand.RaiseCanExecuteChanged();
     }
 
     private void OpenSettingsFromCommand()
@@ -774,7 +809,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         return note.GeminiModel is not null ? $"AI scan ({note.GeminiModel})" : "AI scan";
     }
 
-    private void UpdateStats(DeliveryNote? note, int jobCount = 0)
+    private void UpdateStats(DeliveryNote? note, int lineCount = 0, int labelCount = 0)
     {
         if (note is null)
         {
@@ -788,7 +823,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         DeliveryNoteStat = note.DeliveryNoteNo;
         OrderStat = note.CustomerOrderNo;
         LinesStat = note.LineItems.Count.ToString();
-        LabelsStat = jobCount.ToString();
+        LabelsStat = labelCount > 0 ? labelCount.ToString() : lineCount.ToString();
     }
 
     private void PopulateTable(IReadOnlyList<LabelJob> jobs)
@@ -796,15 +831,80 @@ public sealed class MainViewModel : INotifyPropertyChanged
         LabelRows.Clear();
         foreach (var job in jobs)
         {
-            LabelRows.Add(LabelJobRow.FromJob(job));
+            LabelRows.Add(LabelJobRow.FromJob(job, RefreshLabelSummary));
         }
 
         OnPropertyChanged(nameof(HasLabelRows));
         OnPropertyChanged(nameof(ShowDetailPlaceholder));
     }
 
+    private void AddLabelLine()
+    {
+        if (SelectedQueueItem?.Note is null)
+        {
+            return;
+        }
+
+        var note = SelectedQueueItem.Note;
+        var nextLineNo = LabelRows.Count == 0
+            ? 1
+            : LabelRows.Max(row => row.Job.LineNo) + 1;
+        var job = LabelJobExpander.CreateManualLine(note, nextLineNo);
+        SelectedQueueItem.Jobs.Add(job);
+        var row = LabelJobRow.FromJob(job, RefreshLabelSummary);
+        LabelRows.Add(row);
+        SelectedLabelRow = row;
+        RefreshLabelSummary();
+    }
+
+    private void DeleteSelectedLabelLine()
+    {
+        if (SelectedQueueItem is null || SelectedLabelRow is null)
+        {
+            return;
+        }
+
+        SelectedQueueItem.Jobs.Remove(SelectedLabelRow.Job);
+        LabelRows.Remove(SelectedLabelRow);
+        SelectedLabelRow = null;
+        RefreshLabelSummary();
+    }
+
+    private IReadOnlyList<LabelJob> GetCurrentLabelJobs()
+    {
+        return LabelRows.Select(row => row.Job).ToList();
+    }
+
+    private void RefreshLabelSummary()
+    {
+        if (SelectedQueueItem?.Note is null)
+        {
+            return;
+        }
+
+        var rowCount = LabelRows.Count;
+        var labelsToPrint = rowCount == 0 ? 0 : LabelJob.CountLabelsToPrint(GetCurrentLabelJobs());
+        FooterLabel = rowCount == 0
+            ? "No label lines"
+            : $"{labelsToPrint} labels from {rowCount} line items";
+        UpdateStats(SelectedQueueItem.Note, rowCount, labelsToPrint);
+        SelectedQueueItem.NotifyLabelRowsChanged();
+        OnPropertyChanged(nameof(HasLabelRows));
+        OnPropertyChanged(nameof(ShowDetailPlaceholder));
+        CanExport = SelectedQueueItem.Status == QueueItemStatus.Ready && rowCount > 0;
+        UpdateCommandStates();
+
+        if (SelectedQueueItem.Status == QueueItemStatus.Ready && rowCount > 0)
+        {
+            SetStatus(
+                $"Review {SelectedQueueItem.Note.DeliveryNoteNo}: {labelsToPrint} labels ready to print.",
+                success: true);
+        }
+    }
+
     private void ShowEmptyState()
     {
+        SelectedLabelRow = null;
         FileLabel = "No delivery note selected";
         DetailPlaceholder = StatusReady;
         UpdateStats(null);

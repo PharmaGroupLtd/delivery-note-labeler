@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Windows;
 using DeliveryNoteLabeler.Core.Updates;
 
 namespace DeliveryNoteLabeler.Services;

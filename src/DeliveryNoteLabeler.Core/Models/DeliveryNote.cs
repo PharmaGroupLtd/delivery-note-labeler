@@ -12,5 +12,5 @@ public sealed class DeliveryNote
     public ExtractionMethod ExtractionMethod { get; init; } = ExtractionMethod.Standard;
     public string? GeminiModel { get; init; }
 
-    public int LabelCount => LineItems.Sum(item => item.Quantity);
+    public int LabelCount => LineItems.Count;
 }

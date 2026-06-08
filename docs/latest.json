@@ -1,6 +1,6 @@
-{
-  "version": "1.0.2",
-  "releaseDate": "2026-06-08",
-  "downloadUrl": "https://github.com/REPLACE_OWNER/REPLACE_REPO/releases/download/v1.0.2/DeliveryNoteLabeler-1.0.2-Setup.exe",
-  "releaseNotes": "Multi-PDF drag-and-drop and Print Labels fixes for other PCs."
+﻿{
+    "version":  "1.0.4",
+    "releaseDate":  "2026-06-08",
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.4/DeliveryNoteLabeler-1.0.4-Setup.exe",
+    "releaseNotes":  "Fix Print Labels context menu (PowerShell launcher, self-contained install, logging). Label Qty vs Part Qty, add/delete lines, PDF extraction improvements, in-app updates."
 }

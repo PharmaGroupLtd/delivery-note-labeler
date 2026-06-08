@@ -8,9 +8,7 @@ public static class PdfPathParser
 
     public static IReadOnlyList<string> ResolveStartupPdfPaths(IEnumerable<string>? startupArgs = null)
     {
-        var startup = startupArgs?.ToArray() ?? [];
-        var commandLine = Environment.GetCommandLineArgs().Skip(1).ToArray();
-        var allArgs = startup.Concat(commandLine).ToArray();
+        var allArgs = startupArgs?.ToArray() ?? Environment.GetCommandLineArgs().Skip(1).ToArray();
 
         var openFromPath = ExtractSwitchValue(allArgs, OpenFromSwitch);
         if (!string.IsNullOrWhiteSpace(openFromPath))
@@ -50,7 +48,7 @@ public static class PdfPathParser
 
         foreach (var rawPath in paths)
         {
-            var cleaned = rawPath.Trim().Trim('"');
+            var cleaned = CleanForwardedPath(rawPath);
             if (string.IsNullOrEmpty(cleaned))
             {
                 continue;
@@ -75,7 +73,8 @@ public static class PdfPathParser
                 continue;
             }
 
-            if (!fullPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            if (!fullPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(fullPath))
             {
                 continue;
             }
@@ -84,6 +83,17 @@ public static class PdfPathParser
         }
 
         return resolved;
+    }
+
+    internal static string CleanForwardedPath(string rawPath)
+    {
+        var cleaned = rawPath.Trim().Trim('"').Trim();
+        if (cleaned.EndsWith(')'))
+        {
+            cleaned = cleaned[..^1].Trim().Trim('"').Trim();
+        }
+
+        return cleaned;
     }
 
     public static List<string> ParseInitialPdfPaths(IEnumerable<string> args)

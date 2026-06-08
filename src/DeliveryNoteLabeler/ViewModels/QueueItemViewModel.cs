@@ -85,7 +85,7 @@ public sealed class QueueItemViewModel : INotifyPropertyChanged
                 return FileName;
             }
 
-            return $"Order {Note.CustomerOrderNo} · {Jobs.Count} labels";
+            return $"Order {Note.CustomerOrderNo} · {LabelJob.CountLabelsToPrint(Jobs)} labels";
         }
     }
 
@@ -99,6 +99,11 @@ public sealed class QueueItemViewModel : INotifyPropertyChanged
     };
 
     public bool CanPrint => Status == QueueItemStatus.Ready && Jobs.Count > 0;
+
+    public void NotifyLabelRowsChanged()
+    {
+        OnPropertyChanged(nameof(DisplaySubtitle));
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

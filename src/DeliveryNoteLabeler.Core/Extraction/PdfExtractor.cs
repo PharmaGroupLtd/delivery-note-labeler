@@ -32,7 +32,7 @@ public static class PdfExtractor
 
         for (var index = 0; index < pages.Count; index++)
         {
-            var text = ExtractPageText(pages[index]);
+            var text = PdfTextExtractor.ExtractPageText(pages[index]);
             if (index == 0)
             {
                 header = PdfTextParser.ParseHeader(text);
@@ -65,17 +65,5 @@ public static class PdfExtractor
             SourcePath = path,
             ExtractionMethod = ExtractionMethod.Standard,
         };
-    }
-
-    private static string ExtractPageText(Page page)
-    {
-        var lines = page.GetWords()
-            .GroupBy(word => Math.Round(word.BoundingBox.Bottom, 0))
-            .OrderByDescending(group => group.Key)
-            .Select(group => string.Join(
-                " ",
-                group.OrderBy(word => word.BoundingBox.Left).Select(word => word.Text)));
-
-        return string.Join('\n', lines);
     }
 }

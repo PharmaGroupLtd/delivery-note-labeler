@@ -13,8 +13,8 @@ public class ZplGeneratorTests
             DeliveryNoteNo = "004223 rev 1",
             CustomerOrderNo = "4507425575",
             DrawingNo = "30745655 REV A",
-            LineQuantity = 2,
-            CopyIndex = 1,
+            PartQuantity = 2,
+            LabelQuantity = 1,
             Description = "BRACKET, T-SENSOR",
             LineNo = 1,
         };
@@ -63,8 +63,8 @@ public class ZplGeneratorTests
             DeliveryNoteNo = "DN^1",
             CustomerOrderNo = "ORD~2",
             DrawingNo = "PART~3",
-            LineQuantity = 1,
-            CopyIndex = 1,
+            PartQuantity = 1,
+            LabelQuantity = 1,
             Description = "Test\\value",
             LineNo = 1,
         };
@@ -95,8 +95,8 @@ public class ZplGeneratorTests
             DeliveryNoteNo = "004223 rev 1",
             CustomerOrderNo = "4507425575",
             DrawingNo = "30745655 REV A",
-            LineQuantity = 2,
-            CopyIndex = 1,
+            PartQuantity = 2,
+            LabelQuantity = 1,
             Description = "BRACKET, T-SENSOR, KNOB, BIN FULL, STAINLESS STEEL, LEFT HAND, MOUNTING PLATE",
             LineNo = 1,
         };

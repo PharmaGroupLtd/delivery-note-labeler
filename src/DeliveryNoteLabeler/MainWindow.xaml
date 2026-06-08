@@ -136,13 +136,31 @@
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="{Binding FileLabel}"
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding FileLabel}"
                                Style="{StaticResource SectionHeaderText}"
                                VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding FooterLabel}"
-                               Style="{StaticResource CaptionText}"
-                               HorizontalAlignment="Right"
-                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <Button Content="Add line"
+                                Style="{StaticResource StandardButton}"
+                                MinWidth="88"
+                                Margin="0,0,8,0"
+                                Command="{Binding AddLabelLineCommand}" />
+                        <Button Content="Delete line"
+                                Style="{StaticResource StandardButton}"
+                                MinWidth="96"
+                                Margin="0,0,12,0"
+                                Command="{Binding DeleteLabelLineCommand}" />
+                        <TextBlock Text="{Binding FooterLabel}"
+                                   Style="{StaticResource CaptionText}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
                 </Grid>
 
                 <Grid Grid.Row="1">
@@ -151,6 +169,7 @@
                             Background="White"
                             Visibility="{Binding HasLabelRows, Converter={StaticResource BoolToVisibilityConverter}}">
                         <DataGrid ItemsSource="{Binding LabelRows}"
+                                  SelectedItem="{Binding SelectedLabelRow, Mode=TwoWay}"
                                   AutoGenerateColumns="False"
                                   IsReadOnly="False"
                                   CanUserAddRows="False"
@@ -165,9 +184,9 @@
                                 <DataGridTextColumn Header="Drawing No."
                                                     Binding="{Binding DrawingNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                     Width="160" />
-                                <DataGridTextColumn Header="Copy"
-                                                    Binding="{Binding Copy, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                    Width="72">
+                                <DataGridTextColumn Header="Part Qty"
+                                                    Binding="{Binding PartQty, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                    Width="80">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="HorizontalAlignment" Value="Center" />
@@ -180,9 +199,9 @@
                                         </Style>
                                     </DataGridTextColumn.EditingElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTextColumn Header="Line Qty"
-                                                    Binding="{Binding LineQty, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                    Width="88">
+                                <DataGridTextColumn Header="Label Qty"
+                                                    Binding="{Binding LabelQty, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                    Width="80">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="HorizontalAlignment" Value="Center" />

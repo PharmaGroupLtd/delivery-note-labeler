@@ -52,10 +52,13 @@ public class ExtractorTests
         var note = PdfExtractor.ExtractDeliveryNote(SamplePdf);
         var jobs = LabelJobExpander.ExpandToLabelJobs(note);
 
-        Assert.Equal(7, jobs.Count);
-        var drawingJobs = jobs.Where(job => job.DrawingNo == "30745668 REV A").ToList();
-        Assert.Equal(2, drawingJobs.Count);
-        Assert.Equal([1, 2], drawingJobs.Select(job => job.CopyIndex));
+        Assert.Equal(note.LineItems.Count, jobs.Count);
+        Assert.Equal(5, jobs.Count);
+
+        var drawingJob = jobs.Single(job => job.DrawingNo == "30745668 REV A");
+        Assert.Equal(2, drawingJob.PartQuantity);
+        Assert.Equal(2, drawingJob.LabelQuantity);
+        Assert.Equal(7, LabelJob.CountLabelsToPrint(jobs));
     }
 
     [Fact]

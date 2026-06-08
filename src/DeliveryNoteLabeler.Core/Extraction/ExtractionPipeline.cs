@@ -36,6 +36,11 @@ public sealed class ExtractionPipeline
         }
         catch (ExtractionException exc)
         {
+            if (PdfTextExtractor.DocumentContainsExtractableText(path))
+            {
+                throw;
+            }
+
             if (!ShouldFallbackToGemini(exc))
             {
                 throw;
@@ -46,8 +51,9 @@ public sealed class ExtractionPipeline
             if (!AppConfig.GeminiFallbackAvailable())
             {
                 throw new ExtractionException(
-                    "Normal scan could not extract this PDF. Add a Gemini API key in "
-                    + "Settings to automatically try AI scan for photocopied PDFs.");
+                    "This PDF looks like a scan or image with no readable text. "
+                    + "Export a text-based PDF from your system, or add a Gemini API key in "
+                    + "Settings to automatically try AI scan.");
             }
 
             try

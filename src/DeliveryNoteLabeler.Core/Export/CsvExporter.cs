@@ -11,9 +11,8 @@ public static class CsvExporter
         "customer_order_no",
         "drawing_no",
         "line_no",
-        "line_quantity",
-        "copy_index",
-        "copy_label",
+        "part_quantity",
+        "label_quantity",
         "description",
     ];
 
@@ -33,9 +32,8 @@ public static class CsvExporter
                 job.CustomerOrderNo,
                 job.DrawingNo,
                 job.LineNo.ToString(CultureInfo.InvariantCulture),
-                job.LineQuantity.ToString(CultureInfo.InvariantCulture),
-                job.CopyIndex.ToString(CultureInfo.InvariantCulture),
-                job.CopyLabel,
+                job.PartQuantity.ToString(CultureInfo.InvariantCulture),
+                job.LabelQuantity.ToString(CultureInfo.InvariantCulture),
                 job.Description,
             };
 

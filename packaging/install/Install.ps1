@@ -41,6 +41,10 @@ if (-not (Test-Path $LaunchCmdPath)) {
     throw "Installation failed: PrintLabels.cmd was not copied to $LaunchCmdPath"
 }
 
+if (-not (Test-Path (Join-Path $InstallDir "PrintLabels.ps1"))) {
+    throw "Installation failed: PrintLabels.ps1 was not copied to the install folder."
+}
+
 Register-PrintLabelsContextMenu -LaunchCmdPath $LaunchCmdPath -IconPath (Join-Path $InstallDir "DeliveryNoteLabeler.ico") -ExePath $ExePath
 
 Write-Host ""

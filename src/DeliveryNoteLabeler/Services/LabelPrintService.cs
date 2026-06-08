@@ -37,17 +37,22 @@ public sealed class LabelPrintService
 
         var layout = AppConfig.GetLabelLayoutOptions();
         var logo = LabelBrandingProvider.GetLogo(layout);
+        var printCount = 0;
+        var totalLabels = LabelJob.CountLabelsToPrint(jobs);
 
-        for (var index = 0; index < jobs.Count; index++)
+        foreach (var job in jobs)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var zpl = ZplGenerator.BuildLabelZpl(jobs[index], layout, logo);
-            RawPrinterHelper.SendRaw(printerName, zpl);
-
-            if (index < jobs.Count - 1)
+            var zpl = ZplGenerator.BuildLabelZpl(job, layout, logo);
+            for (var copy = 0; copy < job.LabelQuantity; copy++)
             {
-                await Task.Delay(InterLabelDelay, cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                RawPrinterHelper.SendRaw(printerName, zpl);
+
+                printCount++;
+                if (printCount < totalLabels)
+                {
+                    await Task.Delay(InterLabelDelay, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
     }
