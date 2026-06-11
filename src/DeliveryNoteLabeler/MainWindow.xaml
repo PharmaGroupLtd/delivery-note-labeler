@@ -173,7 +173,8 @@
                             BorderThickness="1"
                             Background="White"
                             Visibility="{Binding HasLabelRows, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <DataGrid ItemsSource="{Binding LabelRows}"
+                        <DataGrid x:Name="LabelRowsGrid"
+                                  ItemsSource="{Binding LabelRows}"
                                   SelectedItem="{Binding SelectedLabelRow, Mode=TwoWay}"
                                   AutoGenerateColumns="False"
                                   IsReadOnly="False"
@@ -184,7 +185,8 @@
                                   CanUserSortColumns="False"
                                   SelectionMode="Single"
                                   SelectionUnit="FullRow"
-                                  GridLinesVisibility="Horizontal">
+                                  GridLinesVisibility="Horizontal"
+                                  PreparingCellForEdit="LabelRowsGrid_PreparingCellForEdit">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Drawing No."
                                                     Binding="{Binding DrawingNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"

@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using DeliveryNoteLabeler.Core.Services;
 using DeliveryNoteLabeler.ViewModels;
@@ -16,6 +17,28 @@ public partial class MainWindow : Window
         _viewModel = (MainViewModel)DataContext;
         _viewModel.AttachOwner(this);
         _viewModel.Initialize(initialPdfs, autoProcessQueue);
+    }
+
+    private void LabelRowsGrid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
+    {
+        if (e.EditingElement is not TextBox textBox)
+        {
+            return;
+        }
+
+        textBox.SelectAll();
+        textBox.Dispatcher.BeginInvoke(textBox.SelectAll, System.Windows.Threading.DispatcherPriority.Input);
+        textBox.PreviewMouseLeftButtonDown += SelectAllTextBoxContentOnClick;
+    }
+
+    private static void SelectAllTextBoxContentOnClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TextBox textBox || !textBox.IsKeyboardFocusWithin)
+        {
+            return;
+        }
+
+        textBox.SelectAll();
     }
 
     private void OnDragEnter(object sender, DragEventArgs e)

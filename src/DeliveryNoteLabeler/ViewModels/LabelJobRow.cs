@@ -21,13 +21,13 @@ public sealed class LabelJobRow : INotifyPropertyChanged
         get => _job.DrawingNo;
         set
         {
-            var cleaned = value.Trim();
-            if (_job.DrawingNo == cleaned)
+            value ??= string.Empty;
+            if (_job.DrawingNo == value)
             {
                 return;
             }
 
-            _job.DrawingNo = cleaned;
+            _job.DrawingNo = value;
             OnPropertyChanged();
         }
     }
