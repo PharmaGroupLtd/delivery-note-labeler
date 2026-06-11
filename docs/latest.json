@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.15",
+    "version":  "1.0.16",
     "releaseDate":  "2026-06-11",
-    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.15/DeliveryNoteLabeler-1.0.15-Setup.exe",
-    "releaseNotes":  "Fix multi-line part number spacing on labels. Wrapped part numbers now use tight line gaps so the second line no longer overlaps the description."
+    "downloadUrl":  "https://github.com/PharmaGroupLtd/delivery-note-labeler/releases/download/v1.0.16/DeliveryNoteLabeler-1.0.16-Setup.exe",
+    "releaseNotes":  "Auto-select text when editing line items in the grid. Part number fields now accept any characters including spaces."
 }
