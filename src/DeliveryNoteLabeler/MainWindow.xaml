@@ -42,11 +42,11 @@
                             Style="{StaticResource StandardButton}"
                             Margin="0,0,8,0"
                             Command="{Binding ExportCommand}" />
-                    <Button Content="Scan with AI"
+                    <Button Content="Retry scan"
                             Style="{StaticResource StandardButton}"
                             Margin="0,0,8,0"
-                            Command="{Binding ScanWithAiCommand}"
-                            Visibility="{Binding ShowScanWithAiButton, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            Command="{Binding RetryScanCommand}"
+                            Visibility="{Binding ShowRetryScanButton, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <Button Content="Settings"
                             Style="{StaticResource StandardButton}"
                             Command="{Binding SettingsCommand}" />
@@ -251,12 +251,12 @@
                                        Style="{StaticResource CaptionText}"
                                        TextWrapping="Wrap"
                                        TextAlignment="Center" />
-                            <Button Content="Scan with AI"
+                            <Button Content="Retry scan"
                                     Style="{StaticResource PrimaryButton}"
                                     Margin="0,16,0,0"
                                     HorizontalAlignment="Center"
-                                    Command="{Binding ScanWithAiCommand}"
-                                    Visibility="{Binding ShowScanWithAiButton, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    Command="{Binding RetryScanCommand}"
+                                    Visibility="{Binding ShowRetryScanButton, Converter={StaticResource BoolToVisibilityConverter}}" />
                         </StackPanel>
                     </Border>
                 </Grid>

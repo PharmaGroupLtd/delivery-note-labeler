@@ -106,7 +106,52 @@ public class ZplGeneratorTests
         Assert.Contains("BRACKET, T-SENSOR", zpl, StringComparison.Ordinal);
         Assert.Contains("MOUNTING PLATE", zpl, StringComparison.Ordinal);
         Assert.Contains("^FB372,", zpl, StringComparison.Ordinal);
-        Assert.Matches(@"\^FB372,\d+,30,L,0", zpl);
+        Assert.Matches(@"\^FB372,\d+,24,L,0", zpl);
+    }
+
+    [Fact]
+    public void BuildLabelZpl_LongPartNumber_UsesTwoLinesAndPushesDescriptionDown()
+    {
+        var shortPartJob = new LabelJob
+        {
+            DeliveryNoteNo = "004223 rev 1",
+            CustomerOrderNo = "4507425575",
+            DrawingNo = "30745655 REV A",
+            PartQuantity = 2,
+            LabelQuantity = 1,
+            Description = "BRACKET, T-SENSOR, KNOB, BIN FULL, SS",
+            LineNo = 1,
+        };
+        var longPartJob = new LabelJob
+        {
+            DeliveryNoteNo = "004223 rev 1",
+            CustomerOrderNo = "4507425575",
+            DrawingNo = "123456789012345678901234567890123456789012",
+            PartQuantity = 2,
+            LabelQuantity = 1,
+            Description = "BRACKET, T-SENSOR, KNOB, BIN FULL, SS",
+            LineNo = 1,
+        };
+
+        var shortZpl = ZplGenerator.BuildLabelZpl(shortPartJob);
+        var longZpl = ZplGenerator.BuildLabelZpl(longPartJob);
+
+        Assert.Contains("123456789012345678901234\\&567890123456789012", longZpl, StringComparison.Ordinal);
+        Assert.Contains("^FB372,2,34,L,0", longZpl, StringComparison.Ordinal);
+
+        var shortDescriptionY = GetFieldOriginY(shortZpl, "DESCRIPTION:");
+        var longDescriptionY = GetFieldOriginY(longZpl, "DESCRIPTION:");
+        Assert.True(longDescriptionY > shortDescriptionY, "Description should move down when the part number wraps.");
+    }
+
+    [Fact]
+    public void SplitPartNumberLines_WrapsEveryTwentyFourCharacters()
+    {
+        var lines = ZplGenerator.SplitPartNumberLines("ABCDEFGHIJKLMNOPQRSTUVWXYYYY");
+
+        Assert.Equal(2, lines.Count);
+        Assert.Equal("ABCDEFGHIJKLMNOPQRSTUVWX", lines[0]);
+        Assert.Equal("YYYY", lines[1]);
     }
 
     [Fact]

@@ -35,6 +35,11 @@ public sealed class LabelPrintService
             return;
         }
 
+        if (!LabelPrintValidator.TryValidatePartNumbers(jobs, out var validationError))
+        {
+            throw new InvalidOperationException(validationError);
+        }
+
         var layout = AppConfig.GetLabelLayoutOptions();
         var logo = LabelBrandingProvider.GetLogo(layout);
         var printCount = 0;

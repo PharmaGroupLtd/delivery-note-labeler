@@ -8,6 +8,9 @@ namespace DeliveryNoteLabeler.Core.Tests;
 
 public class GeminiAndPipelineTests
 {
+    private const string SamplePdf =
+        @"c:\Users\brook\Documents\Delivery Note Scan\deliverynote004223 rev 1.pdf";
+
     private static readonly Dictionary<string, object?> SamplePayload = new()
     {
         ["delivery_note_no"] = "004223 rev 1",
@@ -40,6 +43,63 @@ public class GeminiAndPipelineTests
     }
 
     [Fact]
+    public void ExtractDeliveryNote_RequiresConfiguredApiKey()
+    {
+        var originalEnv = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        var configPath = AppConfig.ConfigFilePath;
+        var hadExistingFile = File.Exists(configPath);
+        var originalContents = hadExistingFile ? File.ReadAllText(configPath) : null;
+        var pdfPath = File.Exists(SamplePdf)
+            ? SamplePdf
+            : Path.Combine(Path.GetTempPath(), "delivery-note-labeler-ai-key-test.pdf");
+
+        try
+        {
+            if (!File.Exists(pdfPath))
+            {
+                File.WriteAllText(pdfPath, "pdf");
+            }
+
+            Environment.SetEnvironmentVariable("GEMINI_API_KEY", null);
+            if (hadExistingFile && originalContents is not null)
+            {
+                File.WriteAllText(configPath, "{}");
+            }
+
+            var pipeline = new ExtractionPipeline();
+            var exception = Assert.Throws<ExtractionException>(() =>
+                pipeline.ExtractDeliveryNote(pdfPath));
+
+            Assert.Contains("Gemini API key not configured", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GEMINI_API_KEY", originalEnv);
+
+            if (hadExistingFile && originalContents is not null)
+            {
+                File.WriteAllText(configPath, originalContents);
+            }
+            else if (File.Exists(configPath))
+            {
+                File.Delete(configPath);
+            }
+
+            if (pdfPath != SamplePdf && File.Exists(pdfPath))
+            {
+                File.Delete(pdfPath);
+            }
+        }
+    }
+
+    [Fact]
+    public void ExtractDeliveryNote_RejectsMissingFile()
+    {
+        var pipeline = new ExtractionPipeline();
+        Assert.Throws<ExtractionException>(() => pipeline.ExtractDeliveryNote("missing.pdf"));
+    }
+
+    [Fact]
     public void FormatGeminiQuotaNotActivated()
     {
         const string raw =
@@ -67,71 +127,6 @@ public class GeminiAndPipelineTests
             Environment.SetEnvironmentVariable("GEMINI_API_KEY", null);
         }
     }
-
-    [Theory]
-    [InlineData("Could not find delivery note header fields in the PDF text.", true)]
-    [InlineData("No line items found in normal scan.", true)]
-    [InlineData("Normal scan failed: unexpected parser error", true)]
-    [InlineData("File not found: missing.pdf", false)]
-    [InlineData("File must be a PDF.", false)]
-    [InlineData("PDF has no pages.", false)]
-    public void ShouldAttemptGeminiFallback(string message, bool expected)
-    {
-        Assert.Equal(expected, ExtractionPipeline.ShouldAttemptGeminiFallback(new ExtractionException(message)));
-    }
-
-    [Fact]
-    public void ExtractDeliveryNoteWithAi_RequiresConfiguredApiKey()
-    {
-        var originalEnv = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-        var configPath = AppConfig.ConfigFilePath;
-        var hadExistingFile = File.Exists(configPath);
-        var originalContents = hadExistingFile ? File.ReadAllText(configPath) : null;
-        var pdfPath = File.Exists(SamplePdf)
-            ? SamplePdf
-            : Path.Combine(Path.GetTempPath(), "delivery-note-labeler-ai-key-test.pdf");
-
-        try
-        {
-            if (!File.Exists(pdfPath))
-            {
-                File.WriteAllText(pdfPath, "pdf");
-            }
-
-            Environment.SetEnvironmentVariable("GEMINI_API_KEY", null);
-            if (hadExistingFile && originalContents is not null)
-            {
-                File.WriteAllText(configPath, "{}");
-            }
-
-            var pipeline = new ExtractionPipeline();
-            var exception = Assert.Throws<ExtractionException>(() =>
-                pipeline.ExtractDeliveryNoteWithAi(pdfPath));
-
-            Assert.Contains("Gemini API key not configured", exception.Message, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("GEMINI_API_KEY", originalEnv);
-
-            if (hadExistingFile && originalContents is not null)
-            {
-                File.WriteAllText(configPath, originalContents);
-            }
-            else if (File.Exists(configPath))
-            {
-                File.Delete(configPath);
-            }
-
-            if (pdfPath != SamplePdf && File.Exists(pdfPath))
-            {
-                File.Delete(pdfPath);
-            }
-        }
-    }
-
-    private const string SamplePdf =
-        @"c:\Users\brook\Documents\Delivery Note Scan\deliverynote004223 rev 1.pdf";
 
     [Fact]
     public void SaveGeminiApiKey_RoundTripsThroughConfigFile()

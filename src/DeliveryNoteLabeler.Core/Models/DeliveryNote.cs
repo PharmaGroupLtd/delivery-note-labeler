@@ -9,7 +9,7 @@ public sealed class DeliveryNote
     public string? Date { get; init; }
     public required IReadOnlyList<LineItem> LineItems { get; init; }
     public string? SourcePath { get; init; }
-    public ExtractionMethod ExtractionMethod { get; init; } = ExtractionMethod.Standard;
+    public ExtractionMethod ExtractionMethod { get; init; } = ExtractionMethod.Gemini;
     public string? GeminiModel { get; init; }
 
     public int LabelCount => LineItems.Count;

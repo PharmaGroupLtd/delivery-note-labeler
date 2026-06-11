@@ -61,7 +61,7 @@
                 <TextBlock Margin="0,6,0,10"
                            TextWrapping="Wrap"
                            Style="{StaticResource CaptionText}"
-                           Text="Used automatically when normal scan cannot read a PDF. Get a key at aistudio.google.com/apikey. If AI scan fails with quota limit: 0, link billing in AI Studio, then create a new key." />
+                           Text="Required to read delivery note PDFs. Get a key at aistudio.google.com/apikey. If AI scan fails with quota limit: 0, link billing in AI Studio, then create a new key." />
 
                 <TextBox x:Name="ApiKeyBox"
                          Style="{StaticResource StandardTextBox}" />
