@@ -45,7 +45,7 @@ public class ZplGeneratorTests
         Assert.Contains("2 PCS", zpl, StringComparison.Ordinal);
         Assert.Contains("^FO20,", zpl, StringComparison.Ordinal);
         Assert.Contains("^A0N,24,24^FH\\^FDQUANTITY:", zpl, StringComparison.Ordinal);
-        Assert.Contains("^A0N,42,42^FB373,1,46,L,0^FH\\^FD2 PCS", zpl, StringComparison.Ordinal);
+        Assert.Contains("^A0N,42,42^FB373,1,0,L,0^FH\\^FD2 PCS", zpl, StringComparison.Ordinal);
         Assert.Contains("MADE IN UK", zpl, StringComparison.Ordinal);
         Assert.Contains("DATE:", zpl, StringComparison.Ordinal);
         Assert.Contains("BRACKET, T-SENSOR", zpl, StringComparison.Ordinal);
@@ -136,12 +136,62 @@ public class ZplGeneratorTests
         var shortZpl = ZplGenerator.BuildLabelZpl(shortPartJob);
         var longZpl = ZplGenerator.BuildLabelZpl(longPartJob);
 
-        Assert.Contains("123456789012345678901234\\&567890123456789012", longZpl, StringComparison.Ordinal);
-        Assert.Contains("^FB372,2,34,L,0", longZpl, StringComparison.Ordinal);
+        Assert.Contains("123456789012345678901234", longZpl, StringComparison.Ordinal);
+        Assert.Contains("567890123456789012", longZpl, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\&", longZpl, StringComparison.Ordinal);
 
         var shortDescriptionY = GetFieldOriginY(shortZpl, "DESCRIPTION:");
         var longDescriptionY = GetFieldOriginY(longZpl, "DESCRIPTION:");
+        var shortPartBorderY = GetPartNumberBorderY(shortZpl);
+        var longPartBorderY = GetPartNumberBorderY(longZpl);
+
         Assert.True(longDescriptionY > shortDescriptionY, "Description should move down when the part number wraps.");
+        Assert.True(longPartBorderY - shortPartBorderY == 32, "Two-line part number should add one extra line plus gap.");
+        Assert.True(longDescriptionY >= longPartBorderY, "Description should start below the part number section border.");
+    }
+
+    [Fact]
+    public void BuildLabelZpl_LongPartNumber_UsesTightLineSpacing()
+    {
+        var job = new LabelJob
+        {
+            DeliveryNoteNo = "004223 rev 1",
+            CustomerOrderNo = "4507425575",
+            DrawingNo = "123456789012345678901234567890123456789012",
+            PartQuantity = 2,
+            LabelQuantity = 1,
+            Description = "BRACKET, T-SENSOR",
+            LineNo = 1,
+        };
+
+        var zpl = ZplGenerator.BuildLabelZpl(job);
+        var lineYs = GetPartNumberValueLineYs(zpl);
+
+        Assert.Equal(2, lineYs.Count);
+        Assert.Equal(32, lineYs[1] - lineYs[0]);
+    }
+
+    private static int GetPartNumberBorderY(string zpl)
+    {
+        var line = zpl.Split('\n').First(l => l.Contains("^GB384,2,2,B,0^FS", StringComparison.Ordinal));
+        var origin = line.Split('^')[1];
+        return int.Parse(origin.Split(',')[1]);
+    }
+
+    private static List<int> GetPartNumberValueLineYs(string zpl)
+    {
+        var partNumberLabelY = GetFieldOriginY(zpl, "PART NUMBER:");
+        var valueStartY = partNumberLabelY + 22 + 4;
+        var lines = zpl.Split('\n')
+            .Where(l => l.StartsWith("^FO424,", StringComparison.Ordinal)
+                && l.Contains("^A0N,30,30^FH\\^FD", StringComparison.Ordinal)
+                && !l.Contains("PART NUMBER:", StringComparison.Ordinal))
+            .Select(l => int.Parse(l.Split('^')[1].Split(',')[1]))
+            .Where(y => y >= valueStartY)
+            .OrderBy(y => y)
+            .ToList();
+
+        return lines;
     }
 
     [Fact]

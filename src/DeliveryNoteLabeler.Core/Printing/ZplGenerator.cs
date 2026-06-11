@@ -14,6 +14,7 @@ public static class ZplGenerator
     private const int DescriptionLineGapDots = 2;
     private const int FooterFontHeight = 20;
     private const int LabelValueGapDots = 4;
+    private const int PartNumberLineGapDots = 2;
     private const int StandardMaxValueLines = 1;
     private const int QuantityMaxValueLines = 1;
 
@@ -42,15 +43,7 @@ public static class ZplGenerator
             builder.AppendLine($"^FO{logo.OriginX},{logo.OriginY}{logo.GraphicFieldCommand}^FS");
         }
 
-        AppendLabelValueSection(
-            builder,
-            sections.PartNumber,
-            "PART NUMBER:",
-            FormatPartNumberFieldData(job.DrawingNo),
-            LabelFontHeight,
-            ValueFontHeight,
-            partNumberLines,
-            valueAlreadyEscaped: true);
+        AppendPartNumberSection(builder, sections.PartNumber, job.DrawingNo);
         AppendLabelValueSection(
             builder,
             sections.DeliveryNumber,
@@ -127,17 +120,6 @@ public static class ZplGenerator
         return footerY - contentBlockHeight - LabelLayoutMetrics.SectionGapDots;
     }
 
-    internal static string FormatPartNumberFieldData(string? partNumber)
-    {
-        if (string.IsNullOrWhiteSpace(partNumber))
-        {
-            return string.Empty;
-        }
-
-        var lines = SplitPartNumberLines(partNumber.Trim());
-        return string.Join("\\&", lines.Select(ZplEscaper.EscapeFieldData));
-    }
-
     internal static IReadOnlyList<string> SplitPartNumberLines(string partNumber)
     {
         var lines = new List<string>();
@@ -149,6 +131,13 @@ public static class ZplGenerator
 
         return lines;
     }
+
+    private static int GetPartNumberSectionHeight(int partNumberValueLines) =>
+        (LabelLayoutMetrics.SectionPaddingDots * 2) +
+        LabelFontHeight +
+        LabelValueGapDots +
+        (partNumberValueLines * ValueFontHeight) +
+        ((partNumberValueLines - 1) * PartNumberLineGapDots);
 
     private static int GetContentBlockHeightDots()
     {
@@ -194,7 +183,7 @@ public static class ZplGenerator
 
         var headerY = LabelLayoutMetrics.ScaleY(layout, LabelLayoutMetrics.HeaderYDots);
         var standardHeight = GetLabelValueSectionHeight(LabelFontHeight, ValueFontHeight, StandardMaxValueLines);
-        var partNumberHeight = GetLabelValueSectionHeight(LabelFontHeight, ValueFontHeight, partNumberValueLines);
+        var partNumberHeight = GetPartNumberSectionHeight(partNumberValueLines);
         var quantityHeight = GetLabelValueSectionHeight(
             QuantityLabelFontHeight,
             QuantityValueFontHeight,
@@ -330,6 +319,28 @@ public static class ZplGenerator
         builder.AppendLine($"^FO{x},{y}^GB{thickness},{height},{thickness},B,0^FS");
     }
 
+    private static void AppendPartNumberSection(StringBuilder builder, SectionRect section, string partNumber)
+    {
+        var padding = LabelLayoutMetrics.SectionPaddingDots;
+        var x = section.InnerX(padding);
+        var y = section.InnerY(padding);
+        var valueHeight = ValueFontHeight;
+
+        AppendField(builder, x, y, LabelFontHeight, LabelFontHeight, "PART NUMBER:");
+        y += LabelFontHeight + LabelValueGapDots;
+
+        if (string.IsNullOrWhiteSpace(partNumber))
+        {
+            return;
+        }
+
+        foreach (var line in SplitPartNumberLines(partNumber.Trim()))
+        {
+            AppendField(builder, x, y, valueHeight, valueHeight, line);
+            y += valueHeight + PartNumberLineGapDots;
+        }
+    }
+
     private static void AppendLabelValueSection(
         StringBuilder builder,
         SectionRect section,
@@ -356,6 +367,7 @@ public static class ZplGenerator
             valueHeight,
             valueHeight,
             value,
+            lineSpacing: 0,
             valueAlreadyEscaped);
     }
 
@@ -399,11 +411,12 @@ public static class ZplGenerator
         int height,
         int width,
         string text,
+        int lineSpacing,
         bool alreadyEscaped = false)
     {
         var fieldData = alreadyEscaped ? text : ZplEscaper.EscapeFieldData(text);
         builder.AppendLine(
-            $"^FO{x},{y}^A0N,{height},{width}^FB{blockWidth},{maxLines},{height + LabelValueGapDots},L,0^FH\\^FD{fieldData}^FS");
+            $"^FO{x},{y}^A0N,{height},{width}^FB{blockWidth},{maxLines},{lineSpacing},L,0^FH\\^FD{fieldData}^FS");
     }
 
     private static void AppendFieldCentered(
